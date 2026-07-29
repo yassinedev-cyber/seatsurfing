@@ -30,7 +30,6 @@ import {
 } from "react-icons/io5";
 import ErrorText from "../types/ErrorText";
 import { NextRouter } from "next/router";
-import NavBar from "@/components/NavBar";
 import RuntimeConfig from "@/components/RuntimeConfig";
 import withReadyRouter from "@/components/withReadyRouter";
 import { Tooltip } from "react-tooltip";
@@ -2958,7 +2957,6 @@ class Search extends React.Component<Props, State> {
 
     return (
       <>
-        <NavBar />
         {locationInfoModal}
         {searchModal}
         {confirmModal}

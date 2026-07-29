@@ -11,7 +11,6 @@ import {
   RefreshCw as IconRecurring,
 } from "react-feather";
 import { NextRouter } from "next/router";
-import NavBar from "@/components/NavBar";
 import withReadyRouter from "@/components/withReadyRouter";
 import ErrorText from "@/types/ErrorText";
 import { getIcal } from "@/components/Ical";
@@ -200,7 +199,6 @@ class Bookings extends React.Component<Props, State> {
     if (this.data.length === 0) {
       return (
         <>
-          <NavBar />
           <div className="container-signin">
             <Form className="form-signin">
               <p>{this.props.t("noBookings")}</p>
@@ -237,7 +235,6 @@ class Bookings extends React.Component<Props, State> {
 
     return (
       <>
-        <NavBar />
         <div className="container-signin">
           <div className="d-lg-block d-none search-config-outer">
             <div className="container-search-config">

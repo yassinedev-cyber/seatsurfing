@@ -3,7 +3,6 @@ import Loading from "../components/Loading";
 import { Alert, Button, ButtonGroup, Form, Modal, Nav } from "react-bootstrap";
 import { NextRouter } from "next/router";
 import { IoLinkOutline } from "react-icons/io5";
-import NavBar from "@/components/NavBar";
 import withReadyRouter from "@/components/withReadyRouter";
 import RuntimeConfig from "@/components/RuntimeConfig";
 import DateTimePicker from "@/components/DateTimePicker";
@@ -508,7 +507,6 @@ class Preferences extends React.Component<Props, State> {
 
     return (
       <>
-        <NavBar />
         <div className="container-center-top">
           <div className="container-center-inner-wide">
             <Nav

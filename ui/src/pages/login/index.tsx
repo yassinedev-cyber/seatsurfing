@@ -663,7 +663,6 @@ class Login extends React.Component<Props, State> {
           }
         >
           <img src="/ui/seatsurfing.svg" alt="Workspace" className="logo" />
-          <p className="login-eyebrow">{this.org?.name}</p>
           <h3>{this.props.t("welcomeBack")}</h3>
           <p className="login-subtitle">{this.props.t("loginSubtitle")}</p>
           <Form.Group style={{ marginBottom: "5px" }}>

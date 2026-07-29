@@ -7,7 +7,6 @@ import {
   MapPin as IconLocation,
 } from "react-feather";
 import { NextRouter } from "next/router";
-import NavBar from "@/components/NavBar";
 import withReadyRouter from "@/components/withReadyRouter";
 import RuntimeConfig from "@/components/RuntimeConfig";
 import { TranslationFunc, withTranslation } from "@/components/withTranslation";
@@ -179,7 +178,6 @@ class Buddies extends React.Component<Props, State> {
     if (this.data.length === 0) {
       return (
         <>
-          <NavBar />
           <div className="container-signin">
             <Form className="form-signin">
               <p>{this.props.t("noBuddies")}</p>
@@ -191,7 +189,6 @@ class Buddies extends React.Component<Props, State> {
     }
     return (
       <>
-        <NavBar />
         <div className="container-signin">
           <Form className="form-signin">
             <ListGroup>

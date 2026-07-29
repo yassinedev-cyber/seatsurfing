@@ -21,7 +21,7 @@ class Loading extends React.Component<Props, State> {
     return (
       <div className={`${paddingTop} ${display} center loading-overlay`}>
         <IconLoad className="feather loader" />
-        &nbsp;Loading &hellip;
+        {this.props.showText === true && <>&nbsp;Loading &hellip;</>}
       </div>
     );
   }

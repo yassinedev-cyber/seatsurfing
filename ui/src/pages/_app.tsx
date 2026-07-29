@@ -26,6 +26,7 @@ import Formatting from "@/util/Formatting";
 import TotpSetupModal from "@/components/TotpSetupModal";
 import MfaEncouragementModal from "@/components/MfaEncouragementModal";
 import SessionExpiredModal from "@/components/SessionExpiredModal";
+import NavBar from "@/components/NavBar";
 import ServerErrorModal from "@/components/ServerErrorModal";
 import NotFoundModal from "@/components/NotFoundModal";
 import BadRequestModal from "@/components/BadRequestModal";
@@ -295,6 +296,10 @@ class App extends React.Component<Props, State> {
     const { Component, pageProps } = this.props;
     Formatting.Language = RuntimeConfig.getLanguage();
     Formatting.t = this.props.t;
+    // Booking UI pages share one persistent NavBar so it survives
+    // client-side navigation instead of remounting on every page.
+    const navBarRoutes = ["/search", "/bookings", "/buddies", "/preferences"];
+    const showNavBar = navBarRoutes.includes(this.props.router.pathname);
     return (
       <>
         <Head>
@@ -348,6 +353,7 @@ class App extends React.Component<Props, State> {
         <ServerErrorModal show={this.state.showServerError} />
         <NotFoundModal show={this.state.showNotFound} />
         <BadRequestModal show={this.state.showBadRequest} />
+        {showNavBar && <NavBar />}
         <Component {...pageProps} />
       </>
     );
