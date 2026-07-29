@@ -663,8 +663,17 @@ class Login extends React.Component<Props, State> {
             this.state.requirePasswordUpdate
           }
         >
-          <BrandLogo className="logo" />
-          <h3>{this.props.t("welcomeBack")}</h3>
+          <div className="login-lockup">
+            <img
+              src="/ui/seatsurfing_white_logo.svg"
+              alt="CODYN Workspace"
+              className="lockup-badge"
+            />
+            <span className="lockup-text">
+              <span className="lockup-name">CODYN</span>
+              <span className="lockup-sub">Workspace</span>
+            </span>
+          </div>
           <p className="login-subtitle">{this.props.t("loginSubtitle")}</p>
           <Form.Group style={{ marginBottom: "5px" }}>
             <Form.Control
@@ -685,31 +694,34 @@ class Login extends React.Component<Props, State> {
             />
           </Form.Group>
           <Form.Group>
-            <InputGroup>
-              <Form.Control
-                type="password"
-                readOnly={this.state.inPasswordSubmit}
-                placeholder={this.props.t("password")}
-                value={this.state.password}
-                onChange={(e: any) =>
-                  this.setState({
-                    password: e.target.value,
-                    invalid: false,
-                    passkeyLoginFailed: false,
-                  })
-                }
-                required={true}
-                isInvalid={this.state.invalid}
-              />
-              <Button variant="primary" type="submit">
-                {this.state.inPasswordSubmit ? (
-                  <Loading showText={false} paddingTop={false} />
-                ) : (
-                  <div className="feather-btn">&#10148;</div>
-                )}
-              </Button>
-            </InputGroup>
+            <Form.Control
+              type="password"
+              readOnly={this.state.inPasswordSubmit}
+              placeholder={this.props.t("password")}
+              value={this.state.password}
+              onChange={(e: any) =>
+                this.setState({
+                  password: e.target.value,
+                  invalid: false,
+                  passkeyLoginFailed: false,
+                })
+              }
+              required={true}
+              isInvalid={this.state.invalid}
+            />
           </Form.Group>
+          <Button
+            variant="primary"
+            type="submit"
+            className="btn-login"
+            disabled={this.state.inPasswordSubmit}
+          >
+            {this.state.inPasswordSubmit ? (
+              <Loading showText={false} paddingTop={false} />
+            ) : (
+              this.props.t("signin")
+            )}
+          </Button>
           <Form.Control.Feedback type="invalid">
             {this.props.t("errorInvalidEmail")}
           </Form.Control.Feedback>
