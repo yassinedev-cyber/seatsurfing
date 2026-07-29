@@ -13,6 +13,7 @@ import "@/styles/SideBar.css";
 import "@/styles/FullLayout.css";
 import "@/styles/Booking.css";
 import "@/styles/FloorPlanDesigner.css";
+import "@/styles/RoyalGlass.css";
 import type { AppProps } from "next/app";
 import RuntimeConfig from "@/components/RuntimeConfig";
 import React from "react";
@@ -299,7 +300,17 @@ class App extends React.Component<Props, State> {
         <Head>
           <link rel="icon" href="/ui/favicon.ico" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <meta name="theme-color" content="#343a40" />
+          <meta
+            name="theme-color"
+            media="(prefers-color-scheme: light)"
+            content="#F8F9FA"
+          />
+          <meta
+            name="theme-color"
+            media="(prefers-color-scheme: dark)"
+            content="#0A1128"
+          />
+          <meta name="color-scheme" content="light dark" />
           <link rel="manifest" href="/ui/manifest.json" />
           <meta name="mobile-web-app-capable" content="yes" />
           <meta
@@ -310,7 +321,7 @@ class App extends React.Component<Props, State> {
           <link rel="apple-touch-icon" href="/ui/favicon-192.png" />
           <link rel="apple-touch-startup-image" href="/ui/favicon-1024.png" />
           <title>
-            Seatsurfing{" "}
+            Workspace{" "}
             {RuntimeConfig.INFOS?.orgName
               ? ` – ${RuntimeConfig.INFOS.orgName}`
               : ""}

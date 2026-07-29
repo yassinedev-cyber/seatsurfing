@@ -1,5 +1,7 @@
 import React from "react";
 import { Nav, Button, Form } from "react-bootstrap";
+import { LogOut as IconLogOut } from "react-feather";
+import ThemeSwitch from "./ThemeSwitch";
 import { NextRouter } from "next/router";
 import Link from "next/link";
 import { TranslationFunc, withTranslation } from "./withTranslation";
@@ -64,12 +66,12 @@ class AdminNavBar extends React.Component<Props, State> {
         >
           <img
             src="/ui/seatsurfing_white.svg"
-            alt="Seatsurfing"
+            alt="Workspace"
             className="d-none d-md-block"
           />
           <img
             src="/ui/seatsurfing_white_logo.svg"
-            alt="Seatsurfing"
+            alt="Workspace"
             className="d-block d-md-none"
           />
         </Link>
@@ -85,11 +87,19 @@ class AdminNavBar extends React.Component<Props, State> {
             maxLength={64}
           />
         </Form>
-        <ul className="navbar-nav px-3">
+        <ul className="navbar-nav px-3 align-items-center flex-row">
+          <li className="nav-item text-nowrap me-2">
+            <ThemeSwitch />
+          </li>
           <li className="nav-item text-nowrap">
-            <Button variant="link" className="nav-link" onClick={this.logout}>
-              {" "}
-              {this.props.t("logout")}
+            <Button
+              variant="link"
+              className="nav-link icon-link"
+              onClick={this.logout}
+              title={this.props.t("logout")}
+              aria-label={this.props.t("logout")}
+            >
+              <IconLogOut className="feather feather-lg" />
             </Button>
           </li>
         </ul>

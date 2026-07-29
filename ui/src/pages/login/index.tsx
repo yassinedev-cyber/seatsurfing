@@ -425,7 +425,7 @@ class Login extends React.Component<Props, State> {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Seatsurfing
+          Workspace
         </a>
         <LanguageSelector />
       </div>
@@ -435,11 +435,11 @@ class Login extends React.Component<Props, State> {
       return (
         <div className="container-signin">
           <Form className="form-signin">
-            <img src="/ui/seatsurfing.svg" alt="Seatsurfing" className="logo" />
+            <img src="/ui/seatsurfing.svg" alt="Workspace" className="logo" />
             <h3>Domain not found.</h3>
             <p>
               Please make sure your domain name is set up correctly in
-              Seatsurfing&#39;s settings.
+              Workspace&#39;s settings.
             </p>
             <p>If you believe this is an error, please contact support.</p>
           </Form>
@@ -468,7 +468,7 @@ class Login extends React.Component<Props, State> {
       return (
         <div className="container-signin">
           <Form className="form-signin">
-            <img src="/ui/seatsurfing.svg" alt="Seatsurfing" className="logo" />
+            <img src="/ui/seatsurfing.svg" alt="Workspace" className="logo" />
             <h3>{this.org?.name}</h3>
             {providerSelection}
             {buttons}
@@ -493,7 +493,7 @@ class Login extends React.Component<Props, State> {
       return (
         <div className="container-signin">
           <Form className="form-signin">
-            <img src="/ui/seatsurfing.svg" alt="Seatsurfing" className="logo" />
+            <img src="/ui/seatsurfing.svg" alt="Workspace" className="logo" />
             <h3>{this.org?.name}</h3>
             <p>
               Password Login is disabled, but no Auth Providers are configured.
@@ -518,7 +518,7 @@ class Login extends React.Component<Props, State> {
             !this.state.requirePasskey || this.state.requirePasswordUpdate
           }
         >
-          <img src="/ui/seatsurfing.svg" alt="Seatsurfing" className="logo" />
+          <img src="/ui/seatsurfing.svg" alt="Workspace" className="logo" />
           <h3>{this.org?.name}</h3>
           <p>{this.props.t("passkeyRequired")}</p>
           <Button
@@ -554,7 +554,7 @@ class Login extends React.Component<Props, State> {
           name="totp-login"
           hidden={!this.state.requireTotp}
         >
-          <img src="/ui/seatsurfing.svg" alt="Seatsurfing" className="logo" />
+          <img src="/ui/seatsurfing.svg" alt="Workspace" className="logo" />
           <h3>{this.org?.name}</h3>
           <p>{this.props.t("enterTotpCode")}</p>
           <Form.Group>
@@ -592,7 +592,7 @@ class Login extends React.Component<Props, State> {
             !this.state.requirePasswordUpdate
           }
         >
-          <img src="/ui/seatsurfing.svg" alt="Seatsurfing" className="logo" />
+          <img src="/ui/seatsurfing.svg" alt="Workspace" className="logo" />
           <h3>{this.org?.name}</h3>
           <p>{this.props.t("passwordUpdateInfo")}</p>
           <Form.Group style={{ marginBottom: "5px" }}>
@@ -662,8 +662,10 @@ class Login extends React.Component<Props, State> {
             this.state.requirePasswordUpdate
           }
         >
-          <img src="/ui/seatsurfing.svg" alt="Seatsurfing" className="logo" />
-          <h3>{this.org?.name}</h3>
+          <img src="/ui/seatsurfing.svg" alt="Workspace" className="logo" />
+          <p className="login-eyebrow">{this.org?.name}</p>
+          <h3>{this.props.t("welcomeBack")}</h3>
+          <p className="login-subtitle">{this.props.t("loginSubtitle")}</p>
           <Form.Group style={{ marginBottom: "5px" }}>
             <Form.Control
               type="email"

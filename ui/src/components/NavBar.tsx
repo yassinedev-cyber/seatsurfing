@@ -19,6 +19,7 @@ import {
   User as IconUser,
   Heart as IconBuddies,
   Shield as IconAdmin,
+  LogOut as IconLogOut,
 } from "react-feather";
 import { NextRouter } from "next/router";
 import withReadyRouter from "./withReadyRouter";
@@ -28,6 +29,7 @@ import MergeRequest from "@/types/MergeRequest";
 import User from "@/types/User";
 import Ajax from "@/util/Ajax";
 import LanguageSelector from "./LanguageSelector";
+import ThemeSwitch from "./ThemeSwitch";
 import RendererUtils from "@/util/RendererUtils";
 
 interface State {
@@ -159,7 +161,14 @@ class NavBar extends React.Component<Props, State> {
         );
       }
       signOffButton = (
-        <Nav.Link onClick={this.logOut}>{this.props.t("logout")}</Nav.Link>
+        <Nav.Link
+          onClick={this.logOut}
+          className="icon-link"
+          title={this.props.t("logout")}
+          aria-label={this.props.t("logout")}
+        >
+          <IconLogOut className="feather feather-lg" />
+        </Nav.Link>
       );
       if (this.state.mergeRequests.length > 0) {
         mergeRequestsButton = (
@@ -246,6 +255,7 @@ class NavBar extends React.Component<Props, State> {
               )}
             </span>
           </Nav.Link>
+          <ThemeSwitch />
           <LanguageSelector inNavbar={true} align="end" />
           {signOffButton}
         </Nav>
@@ -273,7 +283,7 @@ class NavBar extends React.Component<Props, State> {
         >
           <Container fluid={true}>
             <Navbar.Brand as={NavLink} to="/search">
-              <img src={logoUrl} alt="Seatsurfing" />
+              <img src={logoUrl} alt="Workspace" />
             </Navbar.Brand>
             {collapsable}
           </Container>

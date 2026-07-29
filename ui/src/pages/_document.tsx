@@ -46,6 +46,27 @@ class Doc extends Document<Props> {
         <Head nonce={nonce}>
           <meta name="robots" content="noindex" />
           <meta httpEquiv="Content-Security-Policy" content={cspString} />
+          <link
+            rel="preload"
+            href="/ui/fonts/Inter-Var.woff2"
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+          <link
+            rel="preload"
+            href="/ui/fonts/PlayfairDisplay-Var.woff2"
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+          <script
+            nonce={nonce}
+            dangerouslySetInnerHTML={{
+              __html:
+                '(function(){try{var m=window.matchMedia("(prefers-color-scheme: dark)");var a=function(){var s=null;try{s=localStorage.getItem("rg-theme");}catch(e){}document.documentElement.setAttribute("data-bs-theme",s==="dark"||s==="light"?s:m.matches?"dark":"light");};a();if(m.addEventListener){m.addEventListener("change",a);}}catch(e){}})();',
+            }}
+          />
         </Head>
         <body>
           <Main />

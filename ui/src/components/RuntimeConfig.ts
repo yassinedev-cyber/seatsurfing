@@ -282,21 +282,8 @@ export default class RuntimeConfig {
 
   static getAvailableLanguages(): { [key: string]: string } {
     return {
-      "en-GB": "English (UK)",
-      "en-US": "English (US)",
-      de: "Deutsch",
-      et: "Eesti",
-      fi: "Suomi",
+      "en-GB": "English",
       fr: "Français",
-      he: "עברית",
-      hu: "Magyar",
-      it: "Italiano",
-      nl: "Nederlands",
-      pl: "Polski",
-      pt: "Português",
-      ro: "Română",
-      es: "Español",
-      "zh-TW": "繁體中文",
     };
   }
 

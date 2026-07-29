@@ -1762,7 +1762,7 @@ class EditLocation extends React.Component<Props, State> {
     ]);
     return this.ExcellentExport.convert(
       { anchor: e.target, filename: "seatsurfing-spaces", format: "xlsx" },
-      [{ name: "Seatsurfing Spaces", from: { array: [headers, ...rows] } }],
+      [{ name: "Workspace Spaces", from: { array: [headers, ...rows] } }],
     );
   };
 

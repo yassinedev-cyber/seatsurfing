@@ -273,7 +273,7 @@ class Bookings extends React.Component<Props, State> {
       { anchor: e.target, filename: "seatsurfing-bookings", format: "xlsx" },
       [
         {
-          name: "Seatsurfing Bookings",
+          name: "Workspace Bookings",
           from: { table: "datatable" },
           removeColumns: [0, 7],
         },

@@ -76,7 +76,7 @@ class Attributes extends React.Component<Props, State> {
     ]);
     return this.ExcellentExport.convert(
       { anchor: e.target, filename: "seatsurfing-attributes", format: "xlsx" },
-      [{ name: "Seatsurfing Attributes", from: { array: [headers, ...rows] } }],
+      [{ name: "Workspace Attributes", from: { array: [headers, ...rows] } }],
     );
   };
 

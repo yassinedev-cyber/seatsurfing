@@ -175,7 +175,7 @@ class Approvals extends React.Component<Props, State> {
       { anchor: e.target, filename: "seatsurfing-approvals", format: "xlsx" },
       [
         {
-          name: "Seatsurfing Approvals",
+          name: "Workspace Approvals",
           from: { table: "datatable" },
           removeColumns: [0, 7, 8],
         },
