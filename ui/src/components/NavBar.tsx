@@ -1,4 +1,5 @@
 import React from "react";
+import BrandLogo from "./BrandLogo";
 import {
   Navbar,
   Nav,
@@ -271,8 +272,6 @@ class NavBar extends React.Component<Props, State> {
       );
     }
 
-    const logoUrl = RuntimeConfig.INFOS.customLogoUrl || "/ui/seatsurfing.svg";
-
     return (
       <>
         <Navbar
@@ -283,7 +282,7 @@ class NavBar extends React.Component<Props, State> {
         >
           <Container fluid={true}>
             <Navbar.Brand as={NavLink} to="/search">
-              <img src={logoUrl} alt="Workspace" />
+              <BrandLogo />
             </Navbar.Brand>
             {collapsable}
           </Container>
