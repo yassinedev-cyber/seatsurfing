@@ -213,9 +213,11 @@ func (r *SettingsStore) GetOrgIDsByValue(name string, value string) ([]string, e
 func (r *SettingsStore) InitDefaultSettingsForOrg(organizationID string) error {
 	_, err := GetDatabase().DB().Exec("INSERT INTO settings (organization_id, name, value) "+
 		"VALUES "+
-		"($1, '"+SettingFeatureNoUserLimit.Name+"', '0'), "+
-		"($1, '"+SettingFeatureCustomDomains.Name+"', '0'), "+
-		"($1, '"+SettingFeatureGroups.Name+"', '0'), "+
+		// Self-hosted vendor deployment: client organizations are provisioned
+		// with the full feature set; commercial limits are handled outside the app.
+		"($1, '"+SettingFeatureNoUserLimit.Name+"', '1'), "+
+		"($1, '"+SettingFeatureCustomDomains.Name+"', '1'), "+
+		"($1, '"+SettingFeatureGroups.Name+"', '1'), "+
 		"($1, '"+SettingFeatureKioskMode.Name+"', '0'), "+
 		"($1, '"+SettingKioskModeEnabled.Name+"', '0'), "+
 		"($1, '"+SettingAllowAnyUser.Name+"', '1'), "+

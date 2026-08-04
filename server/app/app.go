@@ -655,13 +655,15 @@ func (a *App) InitializeDefaultOrg() {
 		GetOrganizationRepository().Create(org)
 		GetOrganizationRepository().AddDomain(org, domain, true)
 		GetOrganizationRepository().SetPrimaryDomain(org, domain)
+		// The bootstrap organization belongs to the platform operator, so its
+		// admin is a super admin: they provision and manage client organizations.
 		user := &api.User{
 			OrganizationID: org.ID,
 			Email:          email,
 			HashedPassword: api.NullString(GetUserRepository().GetHashedPassword(config.InitOrgPass)),
-			Role:           api.UserRoleOrgAdmin,
-			Firstname:      "Organization",
-			Lastname:       "Admin",
+			Role:           api.UserRoleSuperAdmin,
+			Firstname:      "Platform",
+			Lastname:       "Operator",
 		}
 		GetUserRepository().Create(user)
 		GetOrganizationRepository().CreateSampleData(org)

@@ -96,24 +96,21 @@ class EditOrganization extends React.Component<Props, State> {
     let createUser = !this.entity.id;
     this.entity
       .save()
-      .then(() => {
+      .then(async () => {
         if (createUser) {
-          Domain.add(this.entity.id, this.state.domain).then(() => {
-            const user = new User();
-            user.organizationId = this.entity.id;
-            user.email = this.state.email;
-            user.password = this.state.password;
-            user.requirePassword = true;
-            user.role = 20;
-            user.save().then(() => {
-              this.props.router.push("/admin/organizations/" + this.entity.id);
-              this.setState({ saved: true });
-            });
-          });
-        } else {
-          this.props.router.push("/admin/organizations/" + this.entity.id);
-          this.setState({ saved: true });
+          await Domain.add(this.entity.id, this.state.domain);
+          const user = new User();
+          user.organizationId = this.entity.id;
+          user.email = this.state.email;
+          user.firstname = this.state.firstname;
+          user.lastname = this.state.lastname;
+          user.password = this.state.password;
+          user.requirePassword = true;
+          user.role = 20;
+          await user.save();
         }
+        this.props.router.push("/admin/organizations/" + this.entity.id);
+        this.setState({ saved: true });
       })
       .catch(() => {
         this.setState({ error: true });
@@ -213,9 +210,18 @@ class EditOrganization extends React.Component<Props, State> {
                 type="text"
                 placeholder={this.props.t("yourDomainPlaceholder")}
                 value={this.state.domain}
-                onChange={(e: any) => this.setState({ domain: e.target.value })}
+                onChange={(e: any) =>
+                  this.setState({
+                    domain: e.target.value.trim().toLowerCase(),
+                  })
+                }
                 required={true}
+                pattern={Validation.DOMAIN_PATTERN}
+                title={this.props.t("domainRequirements")}
               />
+              <Form.Text muted={true}>
+                {this.props.t("domainRequirements")}
+              </Form.Text>
             </Col>
           </Form.Group>
           <Form.Group as={Row}>

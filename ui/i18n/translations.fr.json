@@ -154,6 +154,7 @@
   "disableTotpConfirm": "Are you sure you want to disable two-factor authentication? This will make your account less secure.",
   "disconnect": "Disconnect",
   "domain": "Domaine",
+  "domainRequirements": "Utilisez l'adresse complète où le client se connectera, avec un point — par exemple acme.codyn.se. En minuscules, sans espaces, sans https://",
   "domains": "Domaines",
   "download": "Télécharger",
   "drawWall": "Draw wall",
@@ -166,7 +167,7 @@
   "editBooking": "Modifier la réservation",
   "editFloorPlan": "Edit floor plan",
   "editGroup": "Edit group",
-  "editOrg": "Modifier l’organisation",
+  "editOrg": "Organisation cliente",
   "editSpace": "Edit space",
   "editUser": "Modifier l’utilisateur",
   "emailAddress": "Adresse e-mail",
@@ -350,7 +351,7 @@
   "openWebUI": "Ouvrir l’application Web",
   "optional": "Enabled (default optional)",
   "org": "Organisation",
-  "organizations": "Organisations",
+  "organizations": "Clients",
   "orgId": "ID d’instance",
   "orgSignupFailed": "Cela n’a pas fonctionné comme prévu! Peut-être que votre inscription a expirée.",
   "orgSignupGoToLogin": "Continuer vers le panneau d’administration",
@@ -517,5 +518,5 @@
   "workingHoursHintOnlyDaily": "Bookings are only possible on a daily basis.",
   "yes": "yes",
   "yesterday": "Hier",
-  "yourDomainPlaceholder": "seatsurfing.votre-domaine.com"
+  "yourDomainPlaceholder": "acme.codyn.se"
 }

@@ -356,6 +356,10 @@ class Login extends React.Component<Props, State> {
     // only allow relative redirect URLs to prevent (open) redirects
     const redirectUrl = this.props.router.query["redir"] as string;
     if (!redirectUrl || !Validation.isRelativeUrl(redirectUrl)) {
+      // platform operators manage client organizations, they don't book desks
+      if (RuntimeConfig.INFOS?.superAdmin) {
+        return "/admin/organizations";
+      }
       return Navigation.PATH_PAGE_SEARCH;
     }
 

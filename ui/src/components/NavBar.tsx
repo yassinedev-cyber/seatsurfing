@@ -205,29 +205,37 @@ class NavBar extends React.Component<Props, State> {
       );
     }
 
+    // Platform operators (super admins) manage client organizations —
+    // booking features are hidden for them.
+    const isPlatformOperator = RuntimeConfig.INFOS.superAdmin;
+
     collapsable = (
       <>
         <Nav activeKey={this.props.router.pathname}>
-          <Nav.Link as={Link} eventKey="/search" href="/search">
-            {RuntimeConfig.EMBEDDED ? (
-              <IconPlus className="feather feather-lg" />
-            ) : (
-              <>
-                <IconPlus className="feather" /> {this.props.t("bookSeat")}
-              </>
-            )}
-          </Nav.Link>
-          <Nav.Link as={Link} eventKey="/bookings" href="/bookings">
-            {RuntimeConfig.EMBEDDED ? (
-              <IconCalendar className="feather feather-lg" />
-            ) : (
-              <>
-                <IconCalendar className="feather" />{" "}
-                {this.props.t("myBookings")}
-              </>
-            )}
-          </Nav.Link>
-          {buddies}
+          {!isPlatformOperator && (
+            <Nav.Link as={Link} eventKey="/search" href="/search">
+              {RuntimeConfig.EMBEDDED ? (
+                <IconPlus className="feather feather-lg" />
+              ) : (
+                <>
+                  <IconPlus className="feather" /> {this.props.t("bookSeat")}
+                </>
+              )}
+            </Nav.Link>
+          )}
+          {!isPlatformOperator && (
+            <Nav.Link as={Link} eventKey="/bookings" href="/bookings">
+              {RuntimeConfig.EMBEDDED ? (
+                <IconCalendar className="feather feather-lg" />
+              ) : (
+                <>
+                  <IconCalendar className="feather" />{" "}
+                  {this.props.t("myBookings")}
+                </>
+              )}
+            </Nav.Link>
+          )}
+          {!isPlatformOperator && buddies}
           <Nav.Link as={Link} eventKey="/preferences" href="/preferences">
             {RuntimeConfig.EMBEDDED ? (
               <IconSettings className="feather feather-lg" />

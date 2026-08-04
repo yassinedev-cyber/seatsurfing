@@ -2,6 +2,11 @@ export default class Validation {
   static readonly PASSWORD_PATTERN =
     "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[^a-zA-Z0-9]).{8,}$";
   static readonly HUMAN_NAME_PATTERN = "^[\\p{L}\\p{N} \\-'.]+$";
+  // mirrors domainRegex in server/util/validation.go: lower case, at least one
+  // dot, no scheme, no path. Kept in sync so the form rejects what the API
+  // would reject instead of creating a half-provisioned organization.
+  static readonly DOMAIN_PATTERN =
+    "^[a-z0-9]([a-z0-9\\-]{0,61}[a-z0-9])?(\\.[a-z0-9]([a-z0-9\\-]{0,61}[a-z0-9])?)+$";
 
   static readonly PASSWORD_MIN_LENGTH = 8;
   static readonly PASSWORD_MAX_LENGTH = 64;
