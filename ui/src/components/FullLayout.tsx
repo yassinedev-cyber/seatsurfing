@@ -19,6 +19,21 @@ export default class FullLayout extends React.Component<Props, State> {
     window.location.reload();
   };
 
+  // Every admin page renders through this layout, so this is the one place that
+  // has to hold the line: a client's regular user only books desks. Without it
+  // they can reach an admin URL directly and get the admin shell with failing
+  // requests inside it - the API refuses them, but the UI should not pretend
+  // the page is theirs.
+  componentDidMount = () => {
+    const canAdminister =
+      RuntimeConfig.INFOS.superAdmin ||
+      RuntimeConfig.INFOS.orgAdmin ||
+      RuntimeConfig.INFOS.spaceAdmin;
+    if (!canAdminister) {
+      window.location.href = "/ui/search/";
+    }
+  };
+
   render() {
     if (
       RuntimeConfig.INFOS.pluginWelcomeScreens &&

@@ -32,6 +32,16 @@ type GetOrganizationResponse struct {
 	CreateOrganizationRequest
 }
 
+// GetOrganizationListResponse carries the numbers the platform operator needs
+// to judge a client's organization at a glance. Only the super admin listing
+// includes them, so the per-organization counts are never computed on the hot
+// path of a regular organization lookup.
+type GetOrganizationListResponse struct {
+	GetOrganizationResponse
+	UserCount    int `json:"userCount"`
+	BookingCount int `json:"bookingCount"`
+}
+
 type GetDomainResponse struct {
 	DomainName  string     `json:"domain"`
 	Active      bool       `json:"active"`
@@ -149,9 +159,17 @@ func (router *OrganizationRouter) getAll(w http.ResponseWriter, r *http.Request)
 		SendInternalServerError(w)
 		return
 	}
-	res := []*GetOrganizationResponse{}
+	res := []*GetOrganizationListResponse{}
 	for _, e := range list {
-		m := router.copyToRestModel(e)
+		m := &GetOrganizationListResponse{
+			GetOrganizationResponse: *router.copyToRestModel(e),
+		}
+		if num, err := GetUserRepository().GetCount(e.ID); err == nil {
+			m.UserCount = num
+		}
+		if num, err := GetBookingRepository().GetCount(e.ID); err == nil {
+			m.BookingCount = num
+		}
 		res = append(res, m)
 	}
 	SendJSON(w, res)
@@ -482,6 +500,7 @@ func (router *OrganizationRouter) delete(w http.ResponseWriter, r *http.Request)
 	if !GetUserRepository().IsSuperAdmin(user) && CanAdminOrg(user, user.OrganizationID) {
 		if !GetConfig().AllowOrgDelete {
 			SendForbidden(w)
+			return
 		}
 	}
 

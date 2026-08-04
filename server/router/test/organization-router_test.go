@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"net/http"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
 	. "github.com/seatsurfing/seatsurfing/server/api"
+	. "github.com/seatsurfing/seatsurfing/server/config"
 	. "github.com/seatsurfing/seatsurfing/server/repository"
 	. "github.com/seatsurfing/seatsurfing/server/router"
 	. "github.com/seatsurfing/seatsurfing/server/testutil"
@@ -28,6 +30,36 @@ func TestOrganizationsEmptyResult(t *testing.T) {
 	if len(resBody) != 1 {
 		t.Fatalf("Expected array with one element (auto-created)")
 	}
+}
+
+func TestOrganizationsListIncludesCounts(t *testing.T) {
+	ClearTestDB()
+	superAdmin := CreateTestUserSuperAdmin()
+	loginResponse := LoginTestUser(superAdmin.ID)
+
+	org := CreateTestOrg("counted.com")
+	user := CreateTestUserInOrg(org)
+	_, space := CreateTestLocationAndSpace(org)
+	CreateTestBooking9To5(user, space, 1)
+
+	req := NewHTTPRequest("GET", "/organization/", loginResponse.UserID, nil)
+	res := ExecuteTestRequest(req)
+	CheckTestResponseCode(t, http.StatusOK, res.Code)
+
+	var resBody []GetOrganizationListResponse
+	json.Unmarshal(res.Body.Bytes(), &resBody)
+	var found *GetOrganizationListResponse
+	for i, item := range resBody {
+		if item.ID == org.ID {
+			found = &resBody[i]
+		}
+	}
+	if found == nil {
+		t.Fatalf("Expected the created organization in the list")
+	}
+	// the platform operator needs these to judge a client's organization
+	CheckTestInt(t, 1, found.UserCount)
+	CheckTestInt(t, 1, found.BookingCount)
 }
 
 func TestOrganizationsForbidden(t *testing.T) {
@@ -630,6 +662,27 @@ func TestOrganizationsDelete(t *testing.T) {
 	// Verify
 	users, _ := GetUserRepository().GetAll(org.ID, 100, 0)
 	CheckTestInt(t, 0, len(users))
+}
+
+func TestOrganizationsDeleteRequestOrgAdminNotAllowed(t *testing.T) {
+	ClearTestDB()
+	org := CreateTestOrg("test.com")
+	user := CreateTestUserOrgAdmin(org)
+	loginResponse := LoginTestUser(user.ID)
+
+	// org admins must not be able to request a deletion while it is globally disabled
+	GetConfig().AllowOrgDelete = false
+	defer func() {
+		GetConfig().AllowOrgDelete = true
+	}()
+
+	req := NewHTTPRequest("DELETE", "/organization/"+org.ID, loginResponse.UserID, nil)
+	res := ExecuteTestRequest(req)
+	CheckTestResponseCode(t, http.StatusForbidden, res.Code)
+
+	// the handler must stop after the 403 instead of going on to create the auth state,
+	// mail the confirmation code and append it to the response body
+	CheckTestString(t, "", strings.TrimSpace(res.Body.String()))
 }
 
 func TestOrganizationsPrimaryDomain(t *testing.T) {

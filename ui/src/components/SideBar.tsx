@@ -103,6 +103,8 @@ class SideBar extends React.Component<Props, State> {
       path = window.location.pathname.replace("/ui", "");
     }
     const startPaths = [
+      "/admin/clients",
+      "/admin/clients/overview",
       "/admin/organizations",
       "/admin/users",
       "/admin/groups",
@@ -146,25 +148,62 @@ class SideBar extends React.Component<Props, State> {
     // client management. Every desk/booking view belongs to a client's own
     // console and stays scoped to that client's organization.
     const isPlatformOperator = RuntimeConfig.INFOS.superAdmin;
+    // A client's regular user books desks and nothing else, so the workspace
+    // administration section is reserved for space and organization admins.
+    const canAdministerWorkspace =
+      !isPlatformOperator &&
+      (RuntimeConfig.INFOS.orgAdmin || RuntimeConfig.INFOS.spaceAdmin);
     let orgItem = <></>;
     if (RuntimeConfig.INFOS.superAdmin) {
+      // Clients come first: the operator creates the customer, then attaches
+      // the organizations they own - either right away or later on.
       orgItem = (
-        <li className="nav-item">
-          <Nav.Link
-            as={Link}
-            eventKey="/admin/organizations"
-            href="/admin/organizations"
-          >
-            <this.SidebarIcon
-              icon={IconBox}
-              title={this.props.t("organizations")}
-            />
-            <span className="d-none d-md-inline">
-              {" "}
-              {this.props.t("organizations")}
-            </span>
-          </Nav.Link>
-        </li>
+        <>
+          <li className="nav-item">
+            <Nav.Link
+              as={Link}
+              eventKey="/admin/clients/overview"
+              href="/admin/clients/overview"
+            >
+              <this.SidebarIcon
+                icon={IconClipboard}
+                title={this.props.t("operatorOverview")}
+              />
+              <span className="d-none d-md-inline">
+                {" "}
+                {this.props.t("operatorOverview")}
+              </span>
+            </Nav.Link>
+          </li>
+          <li className="nav-item">
+            <Nav.Link as={Link} eventKey="/admin/clients" href="/admin/clients">
+              <this.SidebarIcon
+                icon={IconUsers}
+                title={this.props.t("clients")}
+              />
+              <span className="d-none d-md-inline">
+                {" "}
+                {this.props.t("clients")}
+              </span>
+            </Nav.Link>
+          </li>
+          <li className="nav-item">
+            <Nav.Link
+              as={Link}
+              eventKey="/admin/organizations"
+              href="/admin/organizations"
+            >
+              <this.SidebarIcon
+                icon={IconBox}
+                title={this.props.t("organizations")}
+              />
+              <span className="d-none d-md-inline">
+                {" "}
+                {this.props.t("organizations")}
+              </span>
+            </Nav.Link>
+          </li>
+        </>
       );
     }
     let orgAdminItems = <></>;
@@ -258,7 +297,7 @@ class SideBar extends React.Component<Props, State> {
         <div className="sidebar-sticky pt-3">
           <OrganizationSwitcher />
           <ul className="nav flex-column">
-            {!isPlatformOperator && (
+            {canAdministerWorkspace && (
               <>
                 <li className="nav-item">
                   <Nav.Link

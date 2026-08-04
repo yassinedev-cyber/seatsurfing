@@ -10,3 +10,5 @@ services:
       INIT_ORG_PASS: "Sea!surf1ng"
       INIT_ORG_DOMAIN: "localhost"
       INIT_ORG_LANGUAGE: "en"
+      # Allow org admins to delete their organization (two-step, e-mail confirmed)
+      ALLOW_ORG_DELETE: "1"

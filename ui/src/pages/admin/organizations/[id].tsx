@@ -15,6 +15,8 @@ import Organization from "@/types/Organization";
 import Domain from "@/types/Domain";
 import Ajax from "@/util/Ajax";
 import User from "@/types/User";
+import Client from "@/types/Client";
+import RuntimeConfig from "@/components/RuntimeConfig";
 
 import Validation from "@/util/Validation";
 
@@ -31,6 +33,9 @@ interface State {
   language: string;
   domain: string;
   password: string;
+  clientSearch: string;
+  clientId: string;
+  attaching: boolean;
 }
 
 interface Props {
@@ -40,6 +45,8 @@ interface Props {
 
 class EditOrganization extends React.Component<Props, State> {
   entity: Organization = new Organization();
+  clients: Client[] = [];
+  owner: Client | null = null;
 
   constructor(props: any) {
     super(props);
@@ -56,11 +63,63 @@ class EditOrganization extends React.Component<Props, State> {
       language: "en",
       domain: "",
       password: "",
+      clientSearch: "",
+      clientId: "",
+      attaching: false,
     };
   }
 
   componentDidMount = () => {
     this.loadData();
+    this.loadClients();
+  };
+
+  // The organization can also be handed to a client from here, which is the
+  // natural direction when the organization existed first.
+  loadClients = () => {
+    const { id } = this.props.router.query;
+    Client.list()
+      .then((clients) => {
+        this.clients = clients;
+        this.owner =
+          clients.find((c) =>
+            c.organizations.some((o) => o.organizationId === id),
+          ) ?? null;
+        this.setState({ clientId: "" });
+      })
+      .catch(() => {
+        this.clients = [];
+      });
+  };
+
+  onAttachClient = (e: any) => {
+    e.preventDefault();
+    const client = this.clients.find((c) => c.id === this.state.clientId);
+    if (!client) {
+      return;
+    }
+    this.setState({ attaching: true, error: false, saved: false });
+    client
+      .attachOrganization(this.entity.id)
+      .then(() => {
+        this.setState({ attaching: false, saved: true, clientSearch: "" });
+        this.loadClients();
+      })
+      .catch(() => this.setState({ attaching: false, error: true }));
+  };
+
+  onDetachClient = () => {
+    if (!this.owner || !window.confirm(this.props.t("confirmDetachOrg"))) {
+      return;
+    }
+    this.setState({ attaching: true, error: false, saved: false });
+    this.owner
+      .detachOrganization(this.entity.id)
+      .then(() => {
+        this.setState({ attaching: false, saved: true });
+        this.loadClients();
+      })
+      .catch(() => this.setState({ attaching: false, error: true }));
   };
 
   loadData = () => {
@@ -123,6 +182,102 @@ class EditOrganization extends React.Component<Props, State> {
         this.setState({ goBack: true });
       });
     }
+  };
+
+  // Search by name or email, so a long client list stays usable.
+  renderClientSection = () => {
+    // The operator's own workspace is where client records live - it is never
+    // handed to a client, and the server rejects the attempt anyway.
+    if (!this.entity.id || this.entity.id === RuntimeConfig.INFOS.orgId) {
+      return <></>;
+    }
+    const term = this.state.clientSearch.trim().toLowerCase();
+    const matches = this.clients.filter(
+      (c) =>
+        term === "" ||
+        c.getDisplayName().toLowerCase().includes(term) ||
+        c.email.toLowerCase().includes(term),
+    );
+    return (
+      <>
+        <Form.Group as={Row} className="mt-4">
+          <Form.Label column sm="6" className="lead text-uppercase">
+            {this.props.t("client")}
+          </Form.Label>
+        </Form.Group>
+        {this.owner ? (
+          <Form.Group as={Row}>
+            <Form.Label column sm="2">
+              {this.props.t("belongsTo")}
+            </Form.Label>
+            <Col sm="4">
+              <Link href={"/admin/clients/" + this.owner.id}>
+                {this.owner.getDisplayName()} ({this.owner.email})
+              </Link>
+            </Col>
+            <Col sm="2">
+              <Button
+                className="btn-sm"
+                variant="outline-secondary"
+                onClick={this.onDetachClient}
+                disabled={this.state.attaching}
+              >
+                {this.props.t("detach")}
+              </Button>
+            </Col>
+          </Form.Group>
+        ) : (
+          <Form onSubmit={this.onAttachClient} id="form-attach-client">
+            <Form.Group as={Row}>
+              <Form.Label column sm="2">
+                {this.props.t("searchClient")}
+              </Form.Label>
+              <Col sm="4">
+                <Form.Control
+                  type="search"
+                  id="client-search"
+                  placeholder={this.props.t("searchClientPlaceholder")}
+                  value={this.state.clientSearch}
+                  onChange={(e: any) =>
+                    this.setState({ clientSearch: e.target.value })
+                  }
+                />
+              </Col>
+            </Form.Group>
+            <Form.Group as={Row}>
+              <Form.Label column sm="2">
+                {this.props.t("client")}
+              </Form.Label>
+              <Col sm="4">
+                <Form.Select
+                  id="client-select"
+                  value={this.state.clientId}
+                  onChange={(e: any) =>
+                    this.setState({ clientId: e.target.value })
+                  }
+                >
+                  <option value="">{this.props.t("pleaseSelect")}</option>
+                  {matches.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.getDisplayName()} ({c.email})
+                    </option>
+                  ))}
+                </Form.Select>
+              </Col>
+              <Col sm="2">
+                <Button
+                  variant="outline-secondary"
+                  type="submit"
+                  disabled={this.state.attaching || this.state.clientId === ""}
+                >
+                  {this.props.t("attach")}
+                </Button>
+              </Col>
+            </Form.Group>
+          </Form>
+        )}
+      </>
+    );
   };
 
   render() {
@@ -347,6 +502,7 @@ class EditOrganization extends React.Component<Props, State> {
           </Form.Group>
           {adminSection}
         </Form>
+        {this.renderClientSection()}
       </FullLayout>
     );
   }

@@ -29,6 +29,7 @@ interface RuntimeUserInfos {
   featureRecurringBookings: boolean;
   organizationId: string;
   orgName: string;
+  orgId: string;
   superAdmin: boolean;
   spaceAdmin: boolean;
   orgAdmin: boolean;
@@ -86,6 +87,7 @@ export default class RuntimeConfig {
       featureRecurringBookings: false,
       organizationId: "",
       orgName: "",
+      orgId: "",
       superAdmin: false,
       spaceAdmin: false,
       orgAdmin: false,
@@ -266,6 +268,7 @@ export default class RuntimeConfig {
     RuntimeConfig.INFOS.firstname = user.firstname;
     RuntimeConfig.INFOS.lastname = user.lastname;
     RuntimeConfig.INFOS.orgName = user.organization.name;
+    RuntimeConfig.INFOS.orgId = user.organization.id;
     await RuntimeConfig.loadSettings();
     await RuntimeConfig.loadUserPreferences();
   };

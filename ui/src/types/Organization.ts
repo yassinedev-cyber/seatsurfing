@@ -55,6 +55,9 @@ export default class Organization extends Entity {
   contactLastname: string;
   contactEmail: string;
   language: string;
+  // only populated by the platform operator's organization listing
+  userCount: number;
+  bookingCount: number;
 
   constructor() {
     super();
@@ -63,6 +66,8 @@ export default class Organization extends Entity {
     this.contactLastname = "";
     this.contactEmail = "";
     this.language = "";
+    this.userCount = 0;
+    this.bookingCount = 0;
   }
 
   serialize(): Object {
@@ -83,6 +88,8 @@ export default class Organization extends Entity {
     this.contactLastname = input.lastname;
     this.contactEmail = input.email;
     this.language = input.language;
+    this.userCount = input.userCount ?? 0;
+    this.bookingCount = input.bookingCount ?? 0;
   }
 
   getBackendUrl(): string {

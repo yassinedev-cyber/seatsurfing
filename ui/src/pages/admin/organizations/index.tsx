@@ -8,6 +8,8 @@ import { NextRouter } from "next/router";
 import withReadyRouter from "@/components/withReadyRouter";
 import { TranslationFunc, withTranslation } from "@/components/withTranslation";
 import Organization from "@/types/Organization";
+import Client from "@/types/Client";
+import RuntimeConfig from "@/components/RuntimeConfig";
 
 interface State {
   selectedItem: string;
@@ -21,6 +23,9 @@ interface Props {
 
 class Organizations extends React.Component<Props, State> {
   data: Organization[] = [];
+  // organization id -> the client who owns it, so the operator can see at a
+  // glance which organizations still belong to nobody
+  owners: Map<string, string> = new Map();
 
   constructor(props: any) {
     super(props);
@@ -35,10 +40,18 @@ class Organizations extends React.Component<Props, State> {
   };
 
   loadItems = () => {
-    Organization.list().then((list) => {
-      this.data = list;
-      this.setState({ loading: false });
-    });
+    Promise.all([Organization.list(), Client.list()])
+      .then(([organizations, clients]) => {
+        this.data = organizations;
+        this.owners = new Map();
+        clients.forEach((client) => {
+          client.organizations.forEach((org) => {
+            this.owners.set(org.organizationId, client.getDisplayName());
+          });
+        });
+        this.setState({ loading: false });
+      })
+      .catch(() => this.setState({ loading: false }));
   };
 
   onItemSelect = (org: Organization) => {
@@ -46,9 +59,22 @@ class Organizations extends React.Component<Props, State> {
   };
 
   renderItem = (org: Organization) => {
+    const owner = this.owners.get(org.id);
+    const isOwnWorkspace = org.id === RuntimeConfig.INFOS.orgId;
     return (
       <tr key={org.id} onClick={() => this.onItemSelect(org)}>
         <td>{org.name}</td>
+        <td>
+          {owner ?? (
+            <span className="text-muted">
+              {isOwnWorkspace
+                ? this.props.t("operatorWorkspace")
+                : this.props.t("noClient")}
+            </span>
+          )}
+        </td>
+        <td>{org.userCount}</td>
+        <td>{org.bookingCount}</td>
       </tr>
     );
   };
@@ -90,6 +116,9 @@ class Organizations extends React.Component<Props, State> {
           <thead>
             <tr>
               <th>{this.props.t("org")}</th>
+              <th>{this.props.t("client")}</th>
+              <th>{this.props.t("users")}</th>
+              <th>{this.props.t("bookings")}</th>
             </tr>
           </thead>
           <tbody>{rows}</tbody>
