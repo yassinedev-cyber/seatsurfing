@@ -53,7 +53,7 @@ class EditOrganization extends React.Component<Props, State> {
       firstname: "",
       lastname: "",
       email: "",
-      language: "de",
+      language: "en",
       domain: "",
       password: "",
     };
