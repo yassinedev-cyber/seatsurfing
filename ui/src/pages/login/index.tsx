@@ -151,11 +151,42 @@ class Login extends React.Component<Props, State> {
         this.applyOrg(res);
       })
       .catch(() => {
-        this.setState({
-          domainNotFound: true,
-          loading: false,
-        });
+        // Organizations have no hostname of their own, so there is nothing to
+        // resolve from the URL. The sign-in form is shown as normal and the
+        // organization is resolved from the email address on submit.
+        this.setState({ loading: false });
       });
+  };
+
+  /**
+   * Finds the organization the typed email belongs to.
+   *
+   * The address everyone signs in at is the platform's own, so it identifies no
+   * tenant - the email does. This runs on every sign-in rather than only when
+   * the address resolved to nothing, because otherwise a client's staff, who
+   * exist solely inside their employer's organization, would be authenticated
+   * against the operator's organization and rejected.
+   */
+  resolveOrgFromEmail = async (): Promise<boolean> => {
+    try {
+      const res = await Ajax.postData(
+        "/auth/org-for-email",
+        { email: this.state.email },
+        () => true,
+      );
+      this.org = new Organization();
+      this.org.deserialize(res.json.organization);
+      this.setState({
+        providers: res.json.authProviders,
+        noPasswords: !res.json.requirePassword,
+        disablePasswordLogin: res.json.disablePasswordLogin,
+      });
+      return true;
+    } catch (e) {
+      // Fall back to whatever the address resolved to, so a deployment that
+      // still uses per-organization hostnames keeps working.
+      return this.org != null;
+    }
   };
 
   onSuccessfulLogin = async (data: {
@@ -206,11 +237,17 @@ class Login extends React.Component<Props, State> {
     }
   };
 
-  onPasswordSubmit = (e: any) => {
+  onPasswordSubmit = async (e: any) => {
     e.preventDefault();
     this.setState({
       inPasswordSubmit: true,
     });
+    if (!(await this.resolveOrgFromEmail())) {
+      // Unknown address: reported the same way as a wrong password, so the form
+      // does not tell a stranger which email addresses exist.
+      this.setState({ invalid: true, inPasswordSubmit: false });
+      return;
+    }
     const payload: any = {
       email: this.state.email,
       password: this.state.password,
@@ -391,7 +428,7 @@ class Login extends React.Component<Props, State> {
     if (!redirectUrl || !Validation.isRelativeUrl(redirectUrl)) {
       // platform operators manage clients, they don't book desks
       if (RuntimeConfig.INFOS?.superAdmin) {
-        return "/admin/clients/overview";
+        return "/admin/overview";
       }
       return Navigation.PATH_PAGE_SEARCH;
     }

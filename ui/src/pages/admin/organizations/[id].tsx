@@ -14,7 +14,6 @@ import { TranslationFunc, withTranslation } from "@/components/withTranslation";
 import Organization from "@/types/Organization";
 import Domain from "@/types/Domain";
 import Ajax from "@/util/Ajax";
-import User from "@/types/User";
 import Client from "@/types/Client";
 import RuntimeConfig from "@/components/RuntimeConfig";
 
@@ -148,25 +147,35 @@ class EditOrganization extends React.Component<Props, State> {
       saved: false,
     });
     this.entity.name = this.state.name;
-    this.entity.contactFirstname = this.state.firstname;
-    this.entity.contactLastname = this.state.lastname;
-    this.entity.contactEmail = this.state.email;
     this.entity.language = this.state.language;
-    let createUser = !this.entity.id;
+    const isNew = !this.entity.id;
+    // A new organization is always handed to a client straight away: the admin
+    // account is the client's own identity, copied by the server on attach.
+    // Nothing here creates a user inside the new organization - the operator
+    // has no such power, by design.
+    const owner = isNew
+      ? this.clients.find((c) => c.id === this.state.clientId)
+      : null;
+    if (isNew && !owner) {
+      this.setState({ error: true });
+      return;
+    }
+    if (isNew && owner) {
+      // The organization's primary contact is the client who runs it, so it is
+      // taken from the client record rather than typed in again here.
+      this.entity.contactFirstname = owner.firstname;
+      this.entity.contactLastname = owner.lastname;
+      this.entity.contactEmail = owner.email;
+    } else {
+      this.entity.contactFirstname = this.state.firstname;
+      this.entity.contactLastname = this.state.lastname;
+      this.entity.contactEmail = this.state.email;
+    }
     this.entity
       .save()
       .then(async () => {
-        if (createUser) {
-          await Domain.add(this.entity.id, this.state.domain);
-          const user = new User();
-          user.organizationId = this.entity.id;
-          user.email = this.state.email;
-          user.firstname = this.state.firstname;
-          user.lastname = this.state.lastname;
-          user.password = this.state.password;
-          user.requirePassword = true;
-          user.role = 20;
-          await user.save();
+        if (isNew && owner) {
+          await owner.attachOrganization(this.entity.id);
         }
         this.props.router.push("/admin/organizations/" + this.entity.id);
         this.setState({ saved: true });
@@ -352,55 +361,25 @@ class EditOrganization extends React.Component<Props, State> {
       adminSection = (
         <>
           <Form.Group as={Row}>
-            <Form.Label column sm="6" className="lead text-uppercase">
-              {this.props.t("domain")}
-            </Form.Label>
-          </Form.Group>
-          <Form.Group as={Row}>
             <Form.Label column sm="2">
-              {this.props.t("domain")}
+              {this.props.t("client")}
             </Form.Label>
             <Col sm="4">
-              <Form.Control
-                type="text"
-                placeholder={this.props.t("yourDomainPlaceholder")}
-                value={this.state.domain}
+              <Form.Select
+                value={this.state.clientId}
                 onChange={(e: any) =>
-                  this.setState({
-                    domain: e.target.value.trim().toLowerCase(),
-                  })
+                  this.setState({ clientId: e.target.value })
                 }
                 required={true}
-                pattern={Validation.DOMAIN_PATTERN}
-                title={this.props.t("domainRequirements")}
-              />
-              <Form.Text muted={true}>
-                {this.props.t("domainRequirements")}
-              </Form.Text>
-            </Col>
-          </Form.Group>
-          <Form.Group as={Row}>
-            <Form.Label column sm="6" className="lead text-uppercase">
-              {this.props.t("admin")}
-            </Form.Label>
-          </Form.Group>
-          <Form.Group as={Row}>
-            <Form.Label column sm="2">
-              {this.props.t("password")}
-            </Form.Label>
-            <Col sm="4">
-              <Form.Control
-                type="password"
-                value={this.state.password}
-                onChange={(e: any) =>
-                  this.setState({ password: e.target.value })
-                }
-                required={true}
-                minLength={Validation.PASSWORD_MIN_LENGTH}
-                maxLength={Validation.PASSWORD_MAX_LENGTH}
-                pattern={Validation.PASSWORD_PATTERN}
-                title={this.props.t("passwordRequirements")}
-              />
+              >
+                <option value="">{this.props.t("pleaseSelect")}</option>
+                {this.clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.getDisplayName()} ({c.email})
+                  </option>
+                ))}
+              </Form.Select>
+              <Form.Text muted={true}>{this.props.t("orgOwnerHint")}</Form.Text>
             </Col>
           </Form.Group>
         </>
@@ -447,6 +426,11 @@ class EditOrganization extends React.Component<Props, State> {
               </Form.Select>
             </Col>
           </Form.Group>
+          {/* An existing organization keeps an editable contact: it may predate
+              the client model, and the address receives the deletion
+              confirmation. A new one takes its contact from the client. */}
+          {this.entity.id ? (
+        <>
           <Form.Group as={Row}>
             <Form.Label column sm="6" className="lead text-uppercase">
               {this.props.t("primaryContact")}
@@ -500,6 +484,10 @@ class EditOrganization extends React.Component<Props, State> {
               />
             </Col>
           </Form.Group>
+        </>
+          ) : (
+            <></>
+          )}
           {adminSection}
         </Form>
         {this.renderClientSection()}

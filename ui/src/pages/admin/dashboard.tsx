@@ -67,7 +67,7 @@ class Dashboard extends React.Component<Props, State> {
   componentDidMount = async () => {
     // The platform operator has no workspace of their own to report on.
     if (RuntimeConfig.INFOS.superAdmin) {
-      this.props.router.replace("/admin/clients/overview");
+      this.props.router.replace("/admin/overview");
       return;
     }
     await Promise.all([

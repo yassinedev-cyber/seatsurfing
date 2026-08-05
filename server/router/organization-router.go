@@ -139,7 +139,7 @@ func (router *OrganizationRouter) getOne(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	user := GetRequestUser(r)
-	if !(GetUserRepository().IsSuperAdmin(user) || CanAdminOrg(user, e.ID)) {
+	if !(CanManagePlatform(user) || CanAdminOrg(user, e.ID)) {
 		SendForbidden(w)
 		return
 	}
@@ -149,7 +149,7 @@ func (router *OrganizationRouter) getOne(w http.ResponseWriter, r *http.Request)
 
 func (router *OrganizationRouter) getAll(w http.ResponseWriter, r *http.Request) {
 	user := GetRequestUser(r)
-	if !GetUserRepository().IsSuperAdmin(user) {
+	if !CanManagePlatform(user) {
 		SendForbidden(w)
 		return
 	}
@@ -184,7 +184,7 @@ func (router *OrganizationRouter) getDomains(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	user := GetRequestUser(r)
-	if !(GetUserRepository().IsSuperAdmin(user) || CanAdminOrg(user, e.ID)) {
+	if !(CanManagePlatform(user) || CanAdminOrg(user, e.ID)) {
 		SendForbidden(w)
 		return
 	}
@@ -218,7 +218,7 @@ func (router *OrganizationRouter) addDomain(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	user := GetRequestUser(r)
-	if !(GetUserRepository().IsSuperAdmin(user) || CanAdminOrg(user, e.ID)) {
+	if !(CanManagePlatform(user) || CanAdminOrg(user, e.ID)) {
 		SendForbidden(w)
 		return
 	}
@@ -250,7 +250,7 @@ func (router *OrganizationRouter) addDomain(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	// Add domain
-	err = GetOrganizationRepository().AddDomain(e, domainName, GetUserRepository().IsSuperAdmin(user))
+	err = GetOrganizationRepository().AddDomain(e, domainName, CanManagePlatform(user))
 	if err != nil {
 		log.Println(err)
 		SendAlreadyExists(w)
@@ -268,7 +268,7 @@ func (router *OrganizationRouter) verifyEmail(w http.ResponseWriter, r *http.Req
 		return
 	}
 	user := GetRequestUser(r)
-	if !GetUserRepository().IsSuperAdmin(user) && !CanAdminOrg(user, e.ID) {
+	if !CanManagePlatform(user) && !CanAdminOrg(user, e.ID) {
 		SendForbidden(w)
 		return
 	}
@@ -316,7 +316,7 @@ func (router *OrganizationRouter) verifyDomain(w http.ResponseWriter, r *http.Re
 		return
 	}
 	user := GetRequestUser(r)
-	if !(GetUserRepository().IsSuperAdmin(user) || CanAdminOrg(user, e.ID)) {
+	if !(CanManagePlatform(user) || CanAdminOrg(user, e.ID)) {
 		SendForbidden(w)
 		return
 	}
@@ -357,7 +357,7 @@ func (router *OrganizationRouter) setPrimaryDomain(w http.ResponseWriter, r *htt
 		return
 	}
 	user := GetRequestUser(r)
-	if !(GetUserRepository().IsSuperAdmin(user) || CanAdminOrg(user, e.ID)) {
+	if !(CanManagePlatform(user) || CanAdminOrg(user, e.ID)) {
 		SendForbidden(w)
 		return
 	}
@@ -384,7 +384,7 @@ func (router *OrganizationRouter) removeDomain(w http.ResponseWriter, r *http.Re
 		return
 	}
 	user := GetRequestUser(r)
-	if !(GetUserRepository().IsSuperAdmin(user) || CanAdminOrg(user, org.ID)) {
+	if !(CanManagePlatform(user) || CanAdminOrg(user, org.ID)) {
 		SendForbidden(w)
 		return
 	}
@@ -416,7 +416,7 @@ func (router *OrganizationRouter) removeDomain(w http.ResponseWriter, r *http.Re
 func (router *OrganizationRouter) update(w http.ResponseWriter, r *http.Request) {
 	user := GetRequestUser(r)
 	vars := mux.Vars(r)
-	if !GetUserRepository().IsSuperAdmin(user) && !CanAdminOrg(user, vars["id"]) {
+	if !CanManagePlatform(user) && !CanAdminOrg(user, vars["id"]) {
 		SendForbidden(w)
 		return
 	}
@@ -443,7 +443,7 @@ func (router *OrganizationRouter) update(w http.ResponseWriter, r *http.Request)
 	res := &ChangeOrgEmailResponse{
 		VerifyUUID: "",
 	}
-	if !GetUserRepository().IsSuperAdmin(user) && CanAdminOrg(user, vars["id"]) && !strings.EqualFold(e.ContactEmail, eIncoming.ContactEmail) {
+	if !CanManagePlatform(user) && CanAdminOrg(user, vars["id"]) && !strings.EqualFold(e.ContactEmail, eIncoming.ContactEmail) {
 		payload := &ChangeOrgEmailPayload{
 			OrgID: e.ID,
 			Email: eIncoming.ContactEmail,
@@ -491,13 +491,13 @@ func (router *OrganizationRouter) delete(w http.ResponseWriter, r *http.Request)
 	user := GetRequestUser(r)
 
 	// user needs to be org admin or super user
-	if !(GetUserRepository().IsSuperAdmin(user) || CanAdminOrg(user, user.OrganizationID)) {
+	if !(CanManagePlatform(user) || CanAdminOrg(user, user.OrganizationID)) {
 		SendForbidden(w)
 		return
 	}
 
 	// if no super user: check global "org delete" setting
-	if !GetUserRepository().IsSuperAdmin(user) && CanAdminOrg(user, user.OrganizationID) {
+	if !CanManagePlatform(user) && CanAdminOrg(user, user.OrganizationID) {
 		if !GetConfig().AllowOrgDelete {
 			SendForbidden(w)
 			return
@@ -607,7 +607,7 @@ func (router *OrganizationRouter) SendOrgConfirmDeleteOrgEmail(user *User, ID st
 
 func (router *OrganizationRouter) create(w http.ResponseWriter, r *http.Request) {
 	user := GetRequestUser(r)
-	if !GetUserRepository().IsSuperAdmin(user) {
+	if !CanManagePlatform(user) {
 		SendForbidden(w)
 		return
 	}

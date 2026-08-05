@@ -121,6 +121,10 @@ type AuthPreflightResponse struct {
 	Domain               string                           `json:"domain"`
 }
 
+type OrgForEmailRequest struct {
+	Email string `json:"email" validate:"required,email,max=256"`
+}
+
 type AuthPasswordRequest struct {
 	Email             string          `json:"email" validate:"required,email,max=256"`
 	Password          string          `json:"password" validate:"required,min=8,max=64"`
@@ -169,6 +173,7 @@ func (router *AuthRouter) SetupRoutes(s *mux.Router) {
 	s.HandleFunc("/setpw/{id}", router.completeUserInvitation).Methods("POST")
 	s.HandleFunc("/refresh", router.refreshAccessToken).Methods("POST")
 	s.HandleFunc("/singleorg", router.singleOrg).Methods("GET")
+	s.HandleFunc("/org-for-email", router.getOrgForEmail).Methods("POST")
 	s.HandleFunc("/org/{domain}", router.getOrgDetails).Methods("GET")
 }
 
@@ -179,6 +184,63 @@ func (router *AuthRouter) getOrgDetails(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	org, err := GetOrganizationRepository().GetOneByDomain(vars["domain"])
+	if err != nil || org == nil {
+		SendNotFound(w)
+		return
+	}
+	res := router.getPreflightResponseForOrg(org)
+	if res == nil {
+		SendInternalServerError(w)
+		return
+	}
+	requirePassword, err := GetUserRepository().HasAnyUserInOrgPasswordSet(org.ID)
+	if err != nil {
+		SendInternalServerError(w)
+		return
+	}
+	if requirePassword && GetConfig().DisablePasswordLogin {
+		requirePassword = false
+	}
+	res.RequirePassword = requirePassword
+	res.DisablePasswordLogin = GetConfig().DisablePasswordLogin
+	SendJSON(w, res)
+}
+
+// getOrgForEmail resolves which organization a sign-in belongs to from the
+// email address alone.
+//
+// Organizations do not have a hostname of their own: everyone - operator,
+// clients and their staff - signs in at the platform's single address, so the
+// URL carries no tenant information. The email does. A client who owns several
+// organizations is placed in one of them and moves between them with the
+// organization switcher afterwards, which is why one match is enough here.
+func (router *AuthRouter) getOrgForEmail(w http.ResponseWriter, r *http.Request) {
+	var m OrgForEmailRequest
+	if UnmarshalValidateBody(r, &m) != nil {
+		SendBadRequest(w)
+		return
+	}
+	users, err := GetUserRepository().GetUsersWithEmail(m.Email)
+	if err != nil {
+		SendInternalServerError(w)
+		return
+	}
+	// Prefer an organization the user administers, so a client lands in their
+	// own console rather than in a workspace where they are only a member.
+	var chosen *User
+	for _, u := range users {
+		if u.Disabled {
+			continue
+		}
+		if chosen == nil || (u.Role > chosen.Role) {
+			chosen = u
+		}
+	}
+	if chosen == nil {
+		SendNotFound(w)
+		return
+	}
+	org, err := GetOrganizationRepository().GetOne(chosen.OrganizationID)
 	if err != nil || org == nil {
 		SendNotFound(w)
 		return

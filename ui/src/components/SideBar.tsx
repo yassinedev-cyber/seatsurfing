@@ -104,7 +104,7 @@ class SideBar extends React.Component<Props, State> {
     }
     const startPaths = [
       "/admin/clients",
-      "/admin/clients/overview",
+      "/admin/overview",
       "/admin/organizations",
       "/admin/users",
       "/admin/groups",
@@ -162,8 +162,8 @@ class SideBar extends React.Component<Props, State> {
           <li className="nav-item">
             <Nav.Link
               as={Link}
-              eventKey="/admin/clients/overview"
-              href="/admin/clients/overview"
+              eventKey="/admin/overview"
+              href="/admin/overview"
             >
               <this.SidebarIcon
                 icon={IconClipboard}

@@ -630,7 +630,7 @@ func (router *UserRouter) switchOrganization(w http.ResponseWriter, r *http.Requ
 // each of them owns. The customer directory is the operator's own organization.
 func (router *UserRouter) getClients(w http.ResponseWriter, r *http.Request) {
 	user := GetRequestUser(r)
-	if !GetUserRepository().IsSuperAdmin(user) {
+	if !CanManagePlatform(user) {
 		SendForbidden(w)
 		return
 	}
@@ -688,7 +688,7 @@ func (router *UserRouter) getClients(w http.ResponseWriter, r *http.Request) {
 // several organizations signs in once and switches between them.
 func (router *UserRouter) attachClient(w http.ResponseWriter, r *http.Request) {
 	user := GetRequestUser(r)
-	if !GetUserRepository().IsSuperAdmin(user) {
+	if !CanManagePlatform(user) {
 		SendForbidden(w)
 		return
 	}
@@ -738,7 +738,7 @@ func (router *UserRouter) attachClient(w http.ResponseWriter, r *http.Request) {
 // organizations. The organization and its data are left untouched.
 func (router *UserRouter) detachClient(w http.ResponseWriter, r *http.Request) {
 	user := GetRequestUser(r)
-	if !GetUserRepository().IsSuperAdmin(user) {
+	if !CanManagePlatform(user) {
 		SendForbidden(w)
 		return
 	}
@@ -1046,7 +1046,10 @@ func (router *UserRouter) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if m.OrganizationID != "" && m.OrganizationID != user.OrganizationID && !GetUserRepository().IsSuperAdmin(user) {
+	// Nobody creates a user inside another organization, the platform operator
+	// included. A client's admin account is provisioned through attachClient,
+	// which copies the client's own identity rather than inventing a new one.
+	if m.OrganizationID != "" && m.OrganizationID != user.OrganizationID {
 		SendForbidden(w)
 		return
 	}
@@ -1064,9 +1067,7 @@ func (router *UserRouter) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	e := router.copyFromRestModel(&m)
-	if e.OrganizationID == "" || !GetUserRepository().IsSuperAdmin(user) {
-		e.OrganizationID = user.OrganizationID
-	}
+	e.OrganizationID = user.OrganizationID
 	if e.Role > user.Role && e.Role != UserRoleServiceAccountRO && e.Role != UserRoleServiceAccountRW {
 		e.Role = UserRoleUser
 	}
@@ -1189,7 +1190,9 @@ func (router *UserRouter) getApiToken(w http.ResponseWriter, r *http.Request) {
 		SendNotFound(w)
 		return
 	}
-	if e.OrganizationID != user.OrganizationID && !GetUserRepository().IsSuperAdmin(user) {
+	// An API token is a key to the whole organization, so it never crosses an
+	// organization boundary - not even for the platform operator.
+	if e.OrganizationID != user.OrganizationID {
 		SendNotFound(w)
 		return
 	}
@@ -1215,7 +1218,9 @@ func (router *UserRouter) generateApiToken(w http.ResponseWriter, r *http.Reques
 		SendNotFound(w)
 		return
 	}
-	if e.OrganizationID != user.OrganizationID && !GetUserRepository().IsSuperAdmin(user) {
+	// An API token is a key to the whole organization, so it never crosses an
+	// organization boundary - not even for the platform operator.
+	if e.OrganizationID != user.OrganizationID {
 		SendNotFound(w)
 		return
 	}
@@ -1255,7 +1260,9 @@ func (router *UserRouter) revokeApiToken(w http.ResponseWriter, r *http.Request)
 		SendNotFound(w)
 		return
 	}
-	if e.OrganizationID != user.OrganizationID && !GetUserRepository().IsSuperAdmin(user) {
+	// An API token is a key to the whole organization, so it never crosses an
+	// organization boundary - not even for the platform operator.
+	if e.OrganizationID != user.OrganizationID {
 		SendNotFound(w)
 		return
 	}

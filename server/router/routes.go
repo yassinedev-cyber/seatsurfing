@@ -479,24 +479,25 @@ func GetRequestUser(r *http.Request) *User {
 	return user
 }
 
+// CanManagePlatform reports whether the user runs the SaaS platform itself.
+//
+// Platform power is deliberately account-scoped, never data-scoped: it governs
+// the lifecycle of client organizations (create, rename, domains, plan,
+// suspend, delete) and nothing inside them. The operator must not be able to
+// read a client's users, bookings, areas or analytics, so this must never be
+// used to satisfy an authorization check on tenant data - use CanAccessOrg,
+// CanSpaceAdminOrg or CanAdminOrg for that, none of which grant the operator
+// anything outside their own organization.
+func CanManagePlatform(user *User) bool {
+	return GetUserRepository().IsSuperAdmin(user)
+}
+
 func CanAccessOrg(user *User, organizationID string) bool {
-	if user.OrganizationID == organizationID {
-		return true
-	}
-	if GetUserRepository().IsSuperAdmin(user) {
-		return true
-	}
-	return false
+	return user.OrganizationID == organizationID
 }
 
 func CanSpaceAdminOrg(user *User, organizationID string) bool {
-	if (user.OrganizationID == organizationID) && (GetUserRepository().IsSpaceAdmin(user)) {
-		return true
-	}
-	if GetUserRepository().IsSuperAdmin(user) {
-		return true
-	}
-	return false
+	return (user.OrganizationID == organizationID) && (GetUserRepository().IsSpaceAdmin(user))
 }
 
 // IsLocationWeekdayBookable checks whether every calendar day in [enter, leave)
@@ -535,13 +536,7 @@ func IsLocationWeekdayBookable(location *Location, user *User, enter, leave time
 }
 
 func CanAdminOrg(user *User, organizationID string) bool {
-	if (user.OrganizationID == organizationID) && (GetUserRepository().IsOrgAdmin(user)) {
-		return true
-	}
-	if GetUserRepository().IsSuperAdmin(user) {
-		return true
-	}
-	return false
+	return (user.OrganizationID == organizationID) && (GetUserRepository().IsOrgAdmin(user))
 }
 
 func IsTotpEnforcedForUser(user *User) bool {

@@ -146,9 +146,8 @@ class EditClient extends React.Component<Props, State> {
     org.contactEmail = this.entity.email;
     org.language = this.state.orgLanguage;
     await org.save();
-    if (this.state.orgDomain !== "") {
-      await Domain.add(org.id, this.state.orgDomain);
-    }
+    // No domain is registered: organizations share the platform's single
+    // sign-in address and are resolved from the email address at login.
     await this.entity.attachOrganization(org.id);
   };
 
@@ -498,6 +497,8 @@ class EditClient extends React.Component<Props, State> {
                 title={this.props.t("passwordRequirements")}
               />
               <Form.Text muted={true}>
+                {this.props.t("clientCredentialsHint")}
+                <br />
                 {this.props.t("passwordRequirements")}
               </Form.Text>
             </Col>
@@ -526,26 +527,6 @@ class EditClient extends React.Component<Props, State> {
               minLength={2}
               maxLength={64}
             />
-          </Col>
-        </Form.Group>
-        <Form.Group as={Row}>
-          <Form.Label column sm="2">
-            {this.props.t("domain")}
-          </Form.Label>
-          <Col sm="4">
-            <Form.Control
-              type="text"
-              placeholder={this.props.t("yourDomainPlaceholder")}
-              value={this.state.orgDomain}
-              onChange={(e: any) =>
-                this.setState({
-                  orgDomain: e.target.value.trim().toLowerCase(),
-                })
-              }
-            />
-            <Form.Text muted={true}>
-              {this.props.t("domainRequirements")}
-            </Form.Text>
           </Col>
         </Form.Group>
         <Form.Group as={Row}>

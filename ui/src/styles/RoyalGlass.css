@@ -1332,6 +1332,13 @@ div:has(> .rzpp-mini-map) {
   padding-top: 64px;
 }
 
+/* Wider rail: platform and client consoles both carry longer labels than the
+   original 200px was cut for, and the organization switcher needs room to show
+   a real organization name without truncating it. */
+:root {
+  --sidebar-width-expanded: 248px;
+}
+
 /* ==========================================================================
    LANGUAGE SWITCH — segmented glass capsule (EN / FR), same family as the
    theme switch: quiet by default, gold/navy active segment

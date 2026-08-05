@@ -762,7 +762,9 @@ func (router *BookingRouter) getPresenceReport(w http.ResponseWriter, r *http.Re
 			SendBadRequest(w)
 			return
 		}
-		if !GetUserRepository().IsSuperAdmin(user) && location.OrganizationID != user.OrganizationID {
+		// A presence report is client business data. It stays inside the
+		// organization that owns the location, with no platform-operator escape.
+		if location.OrganizationID != user.OrganizationID {
 			SendForbidden(w)
 			return
 		}

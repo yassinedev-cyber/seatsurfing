@@ -240,6 +240,10 @@ func TestUserMergeUsers(t *testing.T) {
 
 // TODO test domain in org!
 
+// The platform operator provisions a client's admin through attachClient,
+// which copies an identity they already hold. Creating an arbitrary user inside
+// a client's organization would be reaching into the client's own directory, so
+// it is refused like it is for anyone else.
 func TestUserCreateForeignOrgSuperAdmin(t *testing.T) {
 	ClearTestDB()
 	superAdmin := CreateTestUserSuperAdmin()
@@ -250,7 +254,7 @@ func TestUserCreateForeignOrgSuperAdmin(t *testing.T) {
 	payload := "{\"email\": \"" + username + "\", \"firstname\": \"John\", \"lastname\": \"Doe\", \"password\": \"" + TestPassword + "\", \"organizationId\": \"" + org2.ID + "\"}"
 	req := NewHTTPRequest("POST", "/user/", loginResponse.UserID, bytes.NewBufferString(payload))
 	res := ExecuteTestRequest(req)
-	CheckTestResponseCode(t, http.StatusCreated, res.Code)
+	CheckTestResponseCode(t, http.StatusForbidden, res.Code)
 }
 
 func TestUserCreateForeignOrgOrgAdmin(t *testing.T) {
