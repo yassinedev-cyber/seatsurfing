@@ -426,6 +426,21 @@ func (r *UserStore) Delete(e *User) error {
 		"owner_id = $1 OR buddy_id = $1", e.ID); err != nil {
 		return err
 	}
+	// Nothing of the user may outlive the user. A surviving refresh token can
+	// still mint access tokens, a surviving session is still a way in, and the
+	// login history is personal data about someone who no longer exists here.
+	if _, err := GetDatabase().DB().Exec("DELETE FROM refresh_tokens WHERE "+
+		"user_id = $1", e.ID); err != nil {
+		return err
+	}
+	if _, err := GetDatabase().DB().Exec("DELETE FROM sessions WHERE "+
+		"user_id = $1", e.ID); err != nil {
+		return err
+	}
+	if _, err := GetDatabase().DB().Exec("DELETE FROM auth_attempts WHERE "+
+		"user_id = $1", e.ID); err != nil {
+		return err
+	}
 	_, err := GetDatabase().DB().Exec("DELETE FROM users WHERE id = $1", e.ID)
 	return err
 }
@@ -446,6 +461,16 @@ func (r *UserStore) DeleteAll(organizationID string) error {
 	}
 	// Also delete refresh tokens
 	if _, err := GetDatabase().DB().Exec("DELETE FROM refresh_tokens WHERE "+
+		"user_id IN (SELECT id FROM users WHERE organization_id = $1)", organizationID); err != nil {
+		return err
+	}
+	// ... and the sessions those tokens belong to, and the login history: an
+	// organization that is gone leaves nothing of its people behind.
+	if _, err := GetDatabase().DB().Exec("DELETE FROM sessions WHERE "+
+		"user_id IN (SELECT id FROM users WHERE organization_id = $1)", organizationID); err != nil {
+		return err
+	}
+	if _, err := GetDatabase().DB().Exec("DELETE FROM auth_attempts WHERE "+
 		"user_id IN (SELECT id FROM users WHERE organization_id = $1)", organizationID); err != nil {
 		return err
 	}
@@ -525,6 +550,25 @@ func (r *UserStore) IsOrgAdmin(user *User) bool {
 
 func (r *UserStore) IsSuperAdmin(user *User) bool {
 	return int(user.Role) >= int(UserRoleSuperAdmin)
+}
+
+// IsPlatformOrganization reports whether an organization is the one the
+// platform operator's own account lives in.
+//
+// That organization is not a workspace anyone bought. It exists only to hold
+// the operator's account and the directory of client records, because every
+// user row must belong to an organization. It is therefore never presented as
+// an organization: not in the operator's own list of client organizations, and
+// not in the switcher of a client whose directory entry happens to live there.
+//
+// Asked per organization rather than resolved to a single id, so it stays
+// correct when the operator has more than one member of staff.
+func (r *UserStore) IsPlatformOrganization(organizationID string) bool {
+	var num int
+	err := GetDatabase().DB().QueryRow("SELECT COUNT(*) "+
+		"FROM users WHERE organization_id = $1 AND role >= $2",
+		organizationID, int(UserRoleSuperAdmin)).Scan(&num)
+	return err == nil && num > 0
 }
 
 func (r *UserStore) DeleteObsoleteConfluenceAnonymousUsers() (int, error) {

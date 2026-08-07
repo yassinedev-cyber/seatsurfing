@@ -17,6 +17,9 @@ import (
 	. "github.com/seatsurfing/seatsurfing/server/util"
 )
 
+// The listing is client organizations only. An operator who has not signed up
+// a client yet therefore sees nothing - their own organization holds their
+// account and the client directory, and is not a workspace.
 func TestOrganizationsEmptyResult(t *testing.T) {
 	ClearTestDB()
 	user := CreateTestUserSuperAdmin()
@@ -27,8 +30,8 @@ func TestOrganizationsEmptyResult(t *testing.T) {
 	CheckTestResponseCode(t, http.StatusOK, res.Code)
 	var resBody []string
 	json.Unmarshal(res.Body.Bytes(), &resBody)
-	if len(resBody) != 1 {
-		t.Fatalf("Expected array with one element (auto-created)")
+	if len(resBody) != 0 {
+		t.Fatalf("Expected an empty array, got %d", len(resBody))
 	}
 }
 
@@ -252,24 +255,10 @@ func TestOrganizationsCRUD(t *testing.T) {
 	CheckTestString(t, "foo2@seatsurfing.app", resBody2.Email)
 	CheckTestString(t, "en", resBody2.Language)
 
-	// 4. Delete
+	// 4. Delete. The platform operator removes a client's organization in one
+	// step: the emailed confirmation code is for an organization deleting
+	// itself, not for the operator who already owns the account.
 	req = NewHTTPRequest("DELETE", "/organization/"+id, loginResponse.UserID, nil)
-	res = ExecuteTestRequest(req)
-	CheckTestResponseCode(t, http.StatusOK, res.Code)
-	var resBody3 *DeleteOrgResponse
-	json.Unmarshal(res.Body.Bytes(), &resBody3)
-	CheckTestBool(t, true, len(resBody3.Code) == 6)
-
-	// 5. Confirm deletion
-	var authId string
-	GetDatabase().DB().QueryRow(
-		"SELECT id FROM auth_states WHERE auth_state_type=$1 ORDER BY expiry DESC LIMIT 1",
-		7,
-	).Scan(&authId)
-	payload = `{
-		"code": "` + resBody3.Code + `"
-	}`
-	req = NewHTTPRequest("POST", "/organization/deleteorg/"+authId, loginResponse.UserID, bytes.NewBufferString(payload))
 	res = ExecuteTestRequest(req)
 	CheckTestResponseCode(t, http.StatusNoContent, res.Code)
 

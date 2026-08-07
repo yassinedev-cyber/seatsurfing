@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -25,6 +26,14 @@ type CreateOrganizationRequest struct {
 	Lastname  string `json:"lastname" validate:"required,min=2,max=64"`
 	Email     string `json:"email" validate:"required,email,max=128"`
 	Language  string `json:"language" validate:"required,len=2"`
+}
+
+// CreateMyOrganizationRequest is what a client sends to open another workspace
+// of their own. It carries a name and nothing else: the contact details are the
+// client's own identity, which the server already knows and will not take on
+// trust from the browser.
+type CreateMyOrganizationRequest struct {
+	Name string `json:"name" validate:"required,min=2,max=64"`
 }
 
 type GetOrganizationResponse struct {
@@ -79,6 +88,7 @@ type AuthStateOrgDeletionRequestPayload struct {
 }
 
 func (router *OrganizationRouter) SetupRoutes(s *mux.Router) {
+	s.HandleFunc("/my/", router.createMyOrganization).Methods("POST")
 	s.HandleFunc("/domain/verify/{domain}", router.getDomainAccessibilityToken).Methods("GET")
 	s.HandleFunc("/domain/{domain}", router.getOrgForDomain).Methods("GET")
 	s.HandleFunc("/{id}/domain/", router.getDomains).Methods("GET")
@@ -150,7 +160,9 @@ func (router *OrganizationRouter) getOne(w http.ResponseWriter, r *http.Request)
 func (router *OrganizationRouter) getAll(w http.ResponseWriter, r *http.Request) {
 	user := GetRequestUser(r)
 	if !CanManagePlatform(user) {
-		SendForbidden(w)
+		// A client is a tenant of the platform, not an operator of it: the same
+		// listing answers with the organizations they administer and stops there.
+		router.getOwnOrganizations(w, user)
 		return
 	}
 	list, err := GetOrganizationRepository().GetAll()
@@ -159,8 +171,14 @@ func (router *OrganizationRouter) getAll(w http.ResponseWriter, r *http.Request)
 		SendInternalServerError(w)
 		return
 	}
+	// The operator's own organization holds their account and the client
+	// directory. It is not a workspace anyone bought, so it is left out of the
+	// list of client organizations entirely.
 	res := []*GetOrganizationListResponse{}
 	for _, e := range list {
+		if GetUserRepository().IsPlatformOrganization(e.ID) {
+			continue
+		}
 		m := &GetOrganizationListResponse{
 			GetOrganizationResponse: *router.copyToRestModel(e),
 		}
@@ -172,6 +190,54 @@ func (router *OrganizationRouter) getAll(w http.ResponseWriter, r *http.Request)
 		}
 		res = append(res, m)
 	}
+	SendJSON(w, res)
+}
+
+// getOwnOrganizations lists the organizations a client administers.
+//
+// Membership is keyed on the email address: a client who runs several
+// organizations holds one administrator record per organization, all sharing an
+// email. The counts alongside each one are that client's own figures - they are
+// read per organization and never span a tenant boundary.
+func (router *OrganizationRouter) getOwnOrganizations(w http.ResponseWriter, user *User) {
+	if user == nil || !GetUserRepository().IsOrgAdmin(user) {
+		SendForbidden(w)
+		return
+	}
+	accounts, err := GetUserRepository().GetUsersWithEmail(user.Email)
+	if err != nil {
+		log.Println(err)
+		SendInternalServerError(w)
+		return
+	}
+	res := []*GetOrganizationListResponse{}
+	for _, a := range accounts {
+		if a.Disabled || !GetUserRepository().IsOrgAdmin(a) {
+			continue
+		}
+		// The client's entry in the operator's directory is bookkeeping, not a
+		// workspace they own, so it never appears among their organizations.
+		if GetUserRepository().IsPlatformOrganization(a.OrganizationID) {
+			continue
+		}
+		org, err := GetOrganizationRepository().GetOne(a.OrganizationID)
+		if err != nil || org == nil {
+			continue
+		}
+		m := &GetOrganizationListResponse{
+			GetOrganizationResponse: *router.copyToRestModel(org),
+		}
+		if num, err := GetUserRepository().GetCount(org.ID); err == nil {
+			m.UserCount = num
+		}
+		if num, err := GetBookingRepository().GetCount(org.ID); err == nil {
+			m.BookingCount = num
+		}
+		res = append(res, m)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return strings.ToLower(res[i].Name) < strings.ToLower(res[j].Name)
+	})
 	SendJSON(w, res)
 }
 
@@ -489,25 +555,46 @@ func (router *OrganizationRouter) sendVerifyEmailAddressEmail(org *Organization,
 
 func (router *OrganizationRouter) delete(w http.ResponseWriter, r *http.Request) {
 	user := GetRequestUser(r)
+	vars := mux.Vars(r)
 
-	// user needs to be org admin or super user
-	if !(CanManagePlatform(user) || CanAdminOrg(user, user.OrganizationID)) {
+	// Authorization is against the organization being deleted, not against the
+	// caller's own: an administrator of one organization has no say over
+	// another, and the confirmation code below is handed straight back to the
+	// caller, so a mismatch here would delete a stranger's workspace.
+	if !(CanManagePlatform(user) || CanAdminOrg(user, vars["id"])) {
 		SendForbidden(w)
 		return
 	}
 
 	// if no super user: check global "org delete" setting
-	if !CanManagePlatform(user) && CanAdminOrg(user, user.OrganizationID) {
+	if !CanManagePlatform(user) {
 		if !GetConfig().AllowOrgDelete {
 			SendForbidden(w)
 			return
 		}
 	}
 
-	vars := mux.Vars(r)
 	e, err := GetOrganizationRepository().GetOne(vars["id"])
 	if err != nil {
 		SendNotFound(w)
+		return
+	}
+
+	// The platform operator deletes a client's workspace outright. The emailed
+	// confirmation code below exists for an organization deleting itself, where
+	// the mail is the second factor; the operator already holds the account and
+	// there is no address to send it to, since organizations have no domain.
+	if CanManagePlatform(user) {
+		if GetUserRepository().IsPlatformOrganization(e.ID) {
+			SendForbidden(w) // never delete the platform's own organization
+			return
+		}
+		if err := GetOrganizationRepository().Delete(e); err != nil {
+			log.Println(err)
+			SendInternalServerError(w)
+			return
+		}
+		SendUpdated(w)
 		return
 	}
 
@@ -623,6 +710,77 @@ func (router *OrganizationRouter) create(w http.ResponseWriter, r *http.Request)
 	e := router.copyFromRestModel(&m)
 	e.SignupDate = time.Now()
 	if err := GetOrganizationRepository().Create(e); err != nil {
+		log.Println(err)
+		SendInternalServerError(w)
+		return
+	}
+	SendCreated(w, e.ID)
+}
+
+// createMyOrganization lets a client open another workspace of their own.
+//
+// Every organization is a tenant in its own right: its own people, areas,
+// groups and bookings, sharing nothing with the client's other organizations
+// but the client's identity. That identity is what gets copied here - the same
+// email and the same credential, as an administrator of the new organization -
+// so the client signs in once and moves between their workspaces with the
+// organization switcher.
+func (router *OrganizationRouter) createMyOrganization(w http.ResponseWriter, r *http.Request) {
+	user := GetRequestUser(r)
+	if user == nil || !CanAdminOrg(user, user.OrganizationID) {
+		SendForbidden(w)
+		return
+	}
+	// The operator's organization is the client directory, not a workspace, and
+	// the operator creates client organizations through the client record.
+	if GetUserRepository().IsPlatformOrganization(user.OrganizationID) {
+		SendForbidden(w)
+		return
+	}
+	var m CreateMyOrganizationRequest
+	if err := UnmarshalValidateBody(r, &m); err != nil {
+		SendBadRequest(w)
+		return
+	}
+	if !IsValidOrgName(m.Name) {
+		SendBadRequest(w)
+		return
+	}
+	current, err := GetOrganizationRepository().GetOne(user.OrganizationID)
+	if err != nil || current == nil {
+		log.Println(err)
+		SendInternalServerError(w)
+		return
+	}
+	e := &Organization{
+		Name: m.Name,
+		// The client runs this organization, so they are its contact. The
+		// language follows the one they already have; it is not asked for again.
+		ContactFirstname: user.Firstname,
+		ContactLastname:  user.Lastname,
+		ContactEmail:     user.Email,
+		Language:         current.Language,
+		SignupDate:       time.Now(),
+	}
+	if err := GetOrganizationRepository().Create(e); err != nil {
+		log.Println(err)
+		SendInternalServerError(w)
+		return
+	}
+	admin := &User{
+		OrganizationID:         e.ID,
+		Email:                  user.Email,
+		Firstname:              user.Firstname,
+		Lastname:               user.Lastname,
+		HashedPassword:         user.HashedPassword,
+		Role:                   UserRoleOrgAdmin,
+		PasswordPending:        user.PasswordPending,
+		PasswordUpdateRequired: user.PasswordUpdateRequired,
+	}
+	if err := GetUserRepository().Create(admin); err != nil {
+		// A workspace nobody can administer is worse than no workspace at all,
+		// so it does not survive a half-finished creation.
+		GetOrganizationRepository().Delete(e)
 		log.Println(err)
 		SendInternalServerError(w)
 		return

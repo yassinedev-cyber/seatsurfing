@@ -243,6 +243,25 @@ class SideBar extends React.Component<Props, State> {
               <PremiumFeatureIcon className="d-none d-md-inline" />
             </Nav.Link>
           </li>
+          {/* A client may run several workspaces, each with its own people,
+              areas and bookings. This is where they open another one and move
+              between them. */}
+          <li className="nav-item">
+            <Nav.Link
+              as={Link}
+              eventKey="/admin/organizations"
+              href="/admin/organizations"
+            >
+              <this.SidebarIcon
+                icon={IconBox}
+                title={this.props.t("organizations")}
+              />
+              <span className="d-none d-md-inline">
+                {" "}
+                {this.props.t("organizations")}
+              </span>
+            </Nav.Link>
+          </li>
           <li className="nav-item">
             <Nav.Link
               as={Link}

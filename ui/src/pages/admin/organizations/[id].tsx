@@ -59,7 +59,9 @@ class EditOrganization extends React.Component<Props, State> {
       firstname: "",
       lastname: "",
       email: "",
-      language: "en",
+      // Not editable: language is a per-person preference in the interface.
+      // Existing organizations keep whatever they were created with.
+      language: Organization.DEFAULT_LANGUAGE,
       domain: "",
       password: "",
       clientSearch: "",
@@ -68,9 +70,15 @@ class EditOrganization extends React.Component<Props, State> {
     };
   }
 
+  // Who is looking: the operator manages which client owns an organization,
+  // a client manages the organization itself.
+  isPlatformOperator = () => RuntimeConfig.INFOS.superAdmin;
+
   componentDidMount = () => {
     this.loadData();
-    this.loadClients();
+    if (this.isPlatformOperator()) {
+      this.loadClients();
+    }
   };
 
   // The organization can also be handed to a client from here, which is the
@@ -140,12 +148,29 @@ class EditOrganization extends React.Component<Props, State> {
     }
   };
 
+  // A client opening another workspace of their own. Only the name is sent:
+  // the server makes them its administrator and fills in the rest from the
+  // identity they are already signed in with.
+  onCreateOwn = () => {
+    Organization.createForMe(this.state.name.trim())
+      .then(() => {
+        // A full load, so the organization switcher and every menu re-read the
+        // set of workspaces this client now has.
+        window.location.href = "/ui/admin/organizations/";
+      })
+      .catch(() => this.setState({ error: true }));
+  };
+
   onSubmit = (e: any) => {
     e.preventDefault();
     this.setState({
       error: false,
       saved: false,
     });
+    if (!this.entity.id && !this.isPlatformOperator()) {
+      this.onCreateOwn();
+      return;
+    }
     this.entity.name = this.state.name;
     this.entity.language = this.state.language;
     const isNew = !this.entity.id;
@@ -195,8 +220,12 @@ class EditOrganization extends React.Component<Props, State> {
 
   // Search by name or email, so a long client list stays usable.
   renderClientSection = () => {
-    // The operator's own workspace is where client records live - it is never
-    // handed to a client, and the server rejects the attempt anyway.
+    // Ownership is the operator's concern. The operator's own workspace is
+    // where client records live - it is never handed to a client, and the
+    // server rejects the attempt anyway.
+    if (!this.isPlatformOperator()) {
+      return <></>;
+    }
     if (!this.entity.id || this.entity.id === RuntimeConfig.INFOS.orgId) {
       return <></>;
     }
@@ -340,7 +369,10 @@ class EditOrganization extends React.Component<Props, State> {
         <IconSave className="feather" /> {this.props.t("save")}
       </Button>
     );
-    if (this.entity.id) {
+    // Closing a workspace ends its people, areas and bookings at once, so it
+    // stays with the platform operator rather than sitting one click away in a
+    // client's own console.
+    if (this.entity.id && this.isPlatformOperator()) {
       buttons = (
         <>
           {backButton} {buttonDelete} {buttonSave}
@@ -354,10 +386,8 @@ class EditOrganization extends React.Component<Props, State> {
       );
     }
 
-    const languages = ["de", "en"];
-
     let adminSection = <></>;
-    if (!this.entity.id) {
+    if (!this.entity.id && this.isPlatformOperator()) {
       adminSection = (
         <>
           <Form.Group as={Row}>
@@ -386,8 +416,14 @@ class EditOrganization extends React.Component<Props, State> {
       );
     }
 
+    const headline = this.isPlatformOperator()
+      ? this.props.t("editOrg")
+      : this.entity.id
+        ? this.props.t("org")
+        : this.props.t("addOrg");
+
     return (
-      <FullLayout headline={this.props.t("editOrg")} buttons={buttons}>
+      <FullLayout headline={headline} buttons={buttons}>
         <Form onSubmit={this.onSubmit} id="form">
           {hint}
           <Form.Group as={Row}>
@@ -404,32 +440,18 @@ class EditOrganization extends React.Component<Props, State> {
                 minLength={2}
                 maxLength={64}
               />
+              {!this.entity.id && !this.isPlatformOperator() && (
+                <Form.Text muted={true}>
+                  {this.props.t("newOrgHint")}
+                </Form.Text>
+              )}
             </Col>
           </Form.Group>
-          <Form.Group as={Row}>
-            <Form.Label column sm="2">
-              {this.props.t("language")}
-            </Form.Label>
-            <Col sm="4">
-              <Form.Select
-                value={this.state.language}
-                onChange={(e: any) =>
-                  this.setState({ language: e.target.value })
-                }
-                required={true}
-              >
-                {languages.map((lc) => (
-                  <option key={lc} value={lc}>
-                    {this.props.t("language-" + lc)}
-                  </option>
-                ))}
-              </Form.Select>
-            </Col>
-          </Form.Group>
-          {/* An existing organization keeps an editable contact: it may predate
-              the client model, and the address receives the deletion
-              confirmation. A new one takes its contact from the client. */}
-          {this.entity.id ? (
+          {/* An existing organization keeps an editable contact for the
+              operator: it may predate the client model, and the address
+              receives the deletion confirmation. A client is the contact of
+              their own organizations, so they are never asked for it. */}
+          {this.entity.id && this.isPlatformOperator() ? (
         <>
           <Form.Group as={Row}>
             <Form.Label column sm="6" className="lead text-uppercase">

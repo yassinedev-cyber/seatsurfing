@@ -2,6 +2,10 @@ import { Entity } from "./Entity";
 import Ajax from "../util/Ajax";
 
 export default class Organization extends Entity {
+  // The interface language is a per-person preference, so an organization never
+  // asks for one. The server still requires the field, hence a fixed value.
+  static readonly DEFAULT_LANGUAGE = "en";
+
   static readonly ENFORCE_TOTP_DISABLED = 0;
   static readonly ENFORCE_TOTP_ALL_USERS = 1;
   static readonly ENFORCE_TOTP_ADMINS_ONLY = 2;
@@ -124,6 +128,16 @@ export default class Organization extends Entity {
       list.push(e);
     });
     return list;
+  }
+
+  /**
+   * Opens another organization owned by the signed-in client. Only the name is
+   * sent: the server fills in the contact from the client's own identity and
+   * makes them its administrator, so nothing here can claim to be someone else.
+   */
+  static async createForMe(name: string): Promise<string> {
+    const result = await Ajax.postData("/organization/my/", { name });
+    return (result.json?.id ?? "") as string;
   }
 
   static async getOrgForDomain(domain: string): Promise<Organization> {

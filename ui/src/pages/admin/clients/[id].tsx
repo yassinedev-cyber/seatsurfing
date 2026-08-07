@@ -27,10 +27,8 @@ interface State {
   email: string;
   password: string;
   // inline organization, created together with the client or added later
-  withOrg: boolean;
   orgName: string;
   orgDomain: string;
-  orgLanguage: string;
   attachOrgId: string;
 }
 
@@ -55,13 +53,8 @@ class EditClient extends React.Component<Props, State> {
       lastname: "",
       email: "",
       password: "",
-      // On by default: a client without an organization has no workspace to
-      // administer, so they would land on the operator's booking pages with no
-      // admin panel at all. An organization can still be added later instead.
-      withOrg: true,
       orgName: "",
       orgDomain: "",
-      orgLanguage: "en",
       attachOrgId: "",
     };
   }
@@ -112,14 +105,15 @@ class EditClient extends React.Component<Props, State> {
     this.entity
       .save()
       .then(async () => {
-        if (isNew && this.state.withOrg) {
+        // A client is an administrator, so they always get a workspace to
+        // administer: without one they would sign in to nothing.
+        if (isNew) {
           await this.createAndAttachOrg();
         }
         this.setState({
           submitting: false,
           saved: true,
           password: "",
-          withOrg: false,
           orgName: "",
           orgDomain: "",
         });
@@ -140,11 +134,15 @@ class EditClient extends React.Component<Props, State> {
   // and for organizations added later.
   createAndAttachOrg = async () => {
     const org = new Organization();
-    org.name = this.state.orgName;
+    // Naming the workspace is optional: a client who runs a single workspace
+    // has no reason to think about it, so it takes their own name by default.
+    org.name = this.state.orgName.trim() || this.entity.getDisplayName();
     org.contactFirstname = this.entity.firstname;
     org.contactLastname = this.entity.lastname;
     org.contactEmail = this.entity.email;
-    org.language = this.state.orgLanguage;
+    // Language is chosen per person in the interface, not per workspace. The
+    // server still requires a value, so every workspace gets the same one.
+    org.language = Organization.DEFAULT_LANGUAGE;
     await org.save();
     // No domain is registered: organizations share the platform's single
     // sign-in address and are resolved from the email address at login.
@@ -318,27 +316,7 @@ class EditClient extends React.Component<Props, State> {
               {this.props.t("organization")}
             </Form.Label>
           </Form.Group>
-          <Form.Group as={Row}>
-            <Form.Label column sm="2">
-              {this.props.t("createOrgNow")}
-            </Form.Label>
-            <Col sm="4">
-              <Form.Check
-                type="checkbox"
-                id="withOrg"
-                label={this.props.t("createOrgNowHint")}
-                checked={this.state.withOrg}
-                onChange={(e: any) =>
-                  this.setState({ withOrg: e.target.checked })
-                }
-              />
-            </Col>
-          </Form.Group>
-          {this.state.withOrg ? (
-            this.renderOrgFields(true)
-          ) : (
-            <Alert variant="warning">{this.props.t("noOrgWarning")}</Alert>
-          )}
+          {this.renderOrgFields()}
         </>
       );
     }
@@ -409,7 +387,7 @@ class EditClient extends React.Component<Props, State> {
                 {this.props.t("addOrg")}
               </Form.Label>
             </Form.Group>
-            {this.renderOrgFields()}
+            {this.renderOrgFields(true)}
             <Form.Group as={Row}>
               <Col sm={{ span: 4, offset: 2 }}>
                 <Button
@@ -511,44 +489,25 @@ class EditClient extends React.Component<Props, State> {
   }
 
   renderOrgFields = (required: boolean = false) => {
-    const languages = ["de", "en"];
     return (
-      <>
-        <Form.Group as={Row}>
-          <Form.Label column sm="2">
-            {this.props.t("org")}
-          </Form.Label>
-          <Col sm="4">
-            <Form.Control
-              type="text"
-              value={this.state.orgName}
-              onChange={(e: any) => this.setState({ orgName: e.target.value })}
-              required={required}
-              minLength={2}
-              maxLength={64}
-            />
-          </Col>
-        </Form.Group>
-        <Form.Group as={Row}>
-          <Form.Label column sm="2">
-            {this.props.t("language")}
-          </Form.Label>
-          <Col sm="4">
-            <Form.Select
-              value={this.state.orgLanguage}
-              onChange={(e: any) =>
-                this.setState({ orgLanguage: e.target.value })
-              }
-            >
-              {languages.map((lang) => (
-                <option key={lang} value={lang}>
-                  {lang.toUpperCase()}
-                </option>
-              ))}
-            </Form.Select>
-          </Col>
-        </Form.Group>
-      </>
+      <Form.Group as={Row}>
+        <Form.Label column sm="2">
+          {this.props.t("org")}
+        </Form.Label>
+        <Col sm="4">
+          <Form.Control
+            type="text"
+            value={this.state.orgName}
+            onChange={(e: any) => this.setState({ orgName: e.target.value })}
+            required={required}
+            maxLength={64}
+            placeholder={required ? "" : this.props.t("orgNamePlaceholder")}
+          />
+          {!required && (
+            <Form.Text muted={true}>{this.props.t("orgNameHint")}</Form.Text>
+          )}
+        </Col>
+      </Form.Group>
     );
   };
 }

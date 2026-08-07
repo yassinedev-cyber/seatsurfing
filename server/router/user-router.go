@@ -579,6 +579,12 @@ func (router *UserRouter) getMyOrganizations(w http.ResponseWriter, r *http.Requ
 		if u.Disabled {
 			continue
 		}
+		// A client's directory entry lives in the operator's organization, but
+		// that is bookkeeping, not a workspace they own - it must never appear
+		// among the organizations they can switch between.
+		if !GetUserRepository().IsSuperAdmin(u) && GetUserRepository().IsPlatformOrganization(u.OrganizationID) {
+			continue
+		}
 		org, err := GetOrganizationRepository().GetOne(u.OrganizationID)
 		if err != nil || org == nil {
 			continue
@@ -617,6 +623,12 @@ func (router *UserRouter) switchOrganization(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if target.Disabled {
+		SendForbidden(w)
+		return
+	}
+	// The operator's organization is not a workspace, so a client can never
+	// switch into it on the strength of their directory entry there.
+	if !GetUserRepository().IsSuperAdmin(target) && GetUserRepository().IsPlatformOrganization(targetOrgID) {
 		SendForbidden(w)
 		return
 	}
@@ -1012,12 +1024,83 @@ func (router *UserRouter) delete(w http.ResponseWriter, r *http.Request) {
 		SendForbidden(w)
 		return
 	}
+	// Deleting a client is deleting a customer of the platform, so it takes
+	// their whole business with it: every organization they run, and the areas,
+	// bookings and staff inside it. Leaving those behind would leave workspaces
+	// nobody owns, still reachable by the people who worked in them.
+	if CanManagePlatform(user) && GetUserRepository().IsPlatformOrganization(e.OrganizationID) {
+		if err := router.deleteClientOrganizations(e); err != nil {
+			log.Println(err)
+			SendInternalServerError(w)
+			return
+		}
+	}
 	if err := GetUserRepository().Delete(e); err != nil {
 		log.Println(err)
 		SendInternalServerError(w)
 		return
 	}
 	SendUpdated(w)
+}
+
+// deleteClientOrganizations removes every workspace the client runs.
+//
+// An organization shared with another client is kept - only this client's
+// access to it is withdrawn - so that removing one customer never destroys
+// another customer's data.
+func (router *UserRouter) deleteClientOrganizations(client *User) error {
+	accounts, err := GetUserRepository().GetUsersWithEmail(client.Email)
+	if err != nil {
+		return err
+	}
+	for _, account := range accounts {
+		if account.ID == client.ID || GetUserRepository().IsPlatformOrganization(account.OrganizationID) {
+			continue
+		}
+		org, err := GetOrganizationRepository().GetOne(account.OrganizationID)
+		if err != nil || org == nil {
+			continue
+		}
+		shared, err := router.organizationHasOtherClient(org.ID, client.Email)
+		if err != nil {
+			return err
+		}
+		if shared {
+			if err := GetUserRepository().Delete(account); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := GetOrganizationRepository().Delete(org); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// organizationHasOtherClient reports whether a different client also runs this
+// organization, identified by holding an admin account in it whose address has
+// a client record of its own.
+func (router *UserRouter) organizationHasOtherClient(organizationID string, email string) (bool, error) {
+	admins, err := GetUserRepository().GetAll(organizationID, 1000, 0)
+	if err != nil {
+		return false, err
+	}
+	for _, a := range admins {
+		if strings.EqualFold(a.Email, email) || !GetUserRepository().IsOrgAdmin(a) {
+			continue
+		}
+		peers, err := GetUserRepository().GetUsersWithEmail(a.Email)
+		if err != nil {
+			return false, err
+		}
+		for _, p := range peers {
+			if GetUserRepository().IsPlatformOrganization(p.OrganizationID) {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 func (router *UserRouter) create(w http.ResponseWriter, r *http.Request) {
