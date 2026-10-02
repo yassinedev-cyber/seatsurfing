@@ -84,6 +84,11 @@ type GetUserResponse struct {
 	SpaceAdmin      bool                    `json:"spaceAdmin"`
 	OrgAdmin        bool                    `json:"admin"`
 	SuperAdmin      bool                    `json:"superAdmin"`
+	// Client marks the platform's own customer, as opposed to somebody who
+	// works inside a customer's organization. Only they may open another
+	// workspace, so only they are offered the button. Answered for the
+	// signed-in user alone - it costs a lookup, and a listing does not need it.
+	Client bool `json:"client"`
 	TotpEnabled     bool                    `json:"totpEnabled"`
 	HasPasskeys     bool                    `json:"hasPasskeys"`
 	IsPrimaryDomain bool                    `json:"isPrimaryDomain"`
@@ -785,6 +790,7 @@ func (router *UserRouter) getSelf(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	res := router.copyToRestModel(e, false)
+	res.Client = !GetUserRepository().IsSuperAdmin(e) && IsPlatformClient(e)
 	res.Organization = GetOrganizationResponse{
 		ID: org.ID,
 		CreateOrganizationRequest: CreateOrganizationRequest{

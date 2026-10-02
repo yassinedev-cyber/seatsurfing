@@ -147,13 +147,20 @@ class Organizations extends React.Component<Props, State> {
       return <></>;
     }
 
-    let buttons = (
+    // Opening a workspace belongs to the account holder. A colleague promoted
+    // to administrator runs the organization they were given and is not offered
+    // an action the server would refuse.
+    const canAddOrganization =
+      RuntimeConfig.INFOS.superAdmin || RuntimeConfig.INFOS.client;
+    let buttons = canAddOrganization ? (
       <Link
         href="/admin/organizations/add"
         className="btn btn-sm btn-outline-secondary"
       >
         <IconPlus className="feather" /> {this.props.t("add")}
       </Link>
+    ) : (
+      <></>
     );
 
     if (this.state.loading) {
@@ -177,7 +184,11 @@ class Organizations extends React.Component<Props, State> {
     }
     return (
       <FullLayout headline={this.props.t("organizations")} buttons={buttons}>
-        {!isOperator && <p className="text-muted">{this.props.t("orgIsolationHint")}</p>}
+        {isOperator ? (
+          <></>
+        ) : (
+          <p className="text-muted">{this.props.t("orgIsolationHint")}</p>
+        )}
         <Table
           striped={true}
           hover={true}

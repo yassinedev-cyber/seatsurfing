@@ -30,6 +30,9 @@ export default class User extends Entity {
   spaceAdmin: boolean;
   admin: boolean;
   superAdmin: boolean;
+  /** True for the platform's own customer, as opposed to someone who works
+   *  inside a customer's organization. Only answered for the signed-in user. */
+  client: boolean;
   password: string;
   sendInvitation: boolean;
   firstBooking: BuddyBooking | null;
@@ -54,6 +57,7 @@ export default class User extends Entity {
     this.spaceAdmin = false;
     this.admin = false;
     this.superAdmin = false;
+    this.client = false;
     this.password = "";
     this.sendInvitation = false;
     this.firstBooking = null;
@@ -101,6 +105,7 @@ export default class User extends Entity {
     this.spaceAdmin = input.spaceAdmin;
     this.admin = input.admin;
     this.superAdmin = input.superAdmin;
+    this.client = input.client ?? false;
     this.totpEnabled = input.totpEnabled;
     this.hasPasskeys = input.hasPasskeys ?? false;
     this.isPrimaryDomain = input.isPrimaryDomain ?? false;

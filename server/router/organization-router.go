@@ -737,6 +737,14 @@ func (router *OrganizationRouter) createMyOrganization(w http.ResponseWriter, r 
 		SendForbidden(w)
 		return
 	}
+	// Only the platform's own customer opens workspaces. A colleague the client
+	// promoted to administrator runs the organization they were given; they are
+	// not an account holder, and a workspace they created would belong to
+	// nobody the operator has on file.
+	if !IsPlatformClient(user) {
+		SendForbidden(w)
+		return
+	}
 	var m CreateMyOrganizationRequest
 	if err := UnmarshalValidateBody(r, &m); err != nil {
 		SendBadRequest(w)

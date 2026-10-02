@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	. "github.com/seatsurfing/seatsurfing/server/api"
 	. "github.com/seatsurfing/seatsurfing/server/config"
 	. "github.com/seatsurfing/seatsurfing/server/repository"
 	. "github.com/seatsurfing/seatsurfing/server/testutil"
@@ -17,11 +18,34 @@ import (
 // other: separate people, separate areas, separate bookings. The client's
 // identity is the only thing that spans them.
 
+// createTestClient provisions a customer the way the operator does: an entry in
+// the client directory, which is the operator's own organization, plus an
+// administrator account in the workspace the client runs. Both carry the same
+// email and the same credential, which is what makes them one identity.
+func createTestClient(t *testing.T, operator *User, org *Organization, email string) *User {
+	t.Helper()
+	operatorOrg, err := GetOrganizationRepository().GetOne(operator.OrganizationID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	directory := CreateTestUserInOrgWithName(operatorOrg, email, UserRoleUser)
+	directory.HashedPassword = "$2a$10$test-credential-of-the-client"
+	if err := GetUserRepository().Update(directory); err != nil {
+		t.Fatal(err)
+	}
+	admin := CreateTestUserInOrgWithName(org, email, UserRoleOrgAdmin)
+	admin.HashedPassword = directory.HashedPassword
+	if err := GetUserRepository().Update(admin); err != nil {
+		t.Fatal(err)
+	}
+	return admin
+}
+
 func TestClientCreatesOwnOrganization(t *testing.T) {
 	ClearTestDB()
-	CreateTestUserSuperAdmin()
+	operator := CreateTestUserSuperAdmin()
 	first := CreateTestOrg("first-workspace.com")
-	admin := CreateTestUserOrgAdmin(first)
+	admin := createTestClient(t, operator, first, "owner@first-workspace.com")
 	adminLogin := LoginTestUser(admin.ID)
 
 	payload := `{"name": "Second Workspace"}`
@@ -49,7 +73,7 @@ func TestClientCreatesOwnOrganization(t *testing.T) {
 		t.Fatalf("The client is not an administrator of the organization they created")
 	}
 	// The credential is the one they already sign in with, so no second password.
-	if secondAdmin.HashedPassword != admin.HashedPassword {
+	if secondAdmin.HashedPassword == "" || secondAdmin.HashedPassword != admin.HashedPassword {
 		t.Fatal("The new account does not carry the client's own credential")
 	}
 }
@@ -57,9 +81,9 @@ func TestClientCreatesOwnOrganization(t *testing.T) {
 // Having created it, the client can see it and walk into it.
 func TestClientSwitchesIntoOrganizationTheyCreated(t *testing.T) {
 	ClearTestDB()
-	CreateTestUserSuperAdmin()
+	operator := CreateTestUserSuperAdmin()
 	first := CreateTestOrg("switch-into-new.com")
-	admin := CreateTestUserOrgAdmin(first)
+	admin := createTestClient(t, operator, first, "owner@switch-into-new.com")
 	adminLogin := LoginTestUser(admin.ID)
 
 	payload := `{"name": "Branch Office"}`
@@ -87,9 +111,9 @@ func TestClientSwitchesIntoOrganizationTheyCreated(t *testing.T) {
 // The heart of it: two organizations owned by the same client share nothing.
 func TestClientOrganizationsHoldSeparateData(t *testing.T) {
 	ClearTestDB()
-	CreateTestUserSuperAdmin()
+	operator := CreateTestUserSuperAdmin()
 	first := CreateTestOrg("separate-first.com")
-	admin := CreateTestUserOrgAdmin(first)
+	admin := createTestClient(t, operator, first, "owner@separate-first.com")
 	adminLogin := LoginTestUser(admin.ID)
 
 	// people and places that exist only in the first organization
@@ -152,10 +176,10 @@ func TestClientOrganizationListShowsOnlyTheirOwn(t *testing.T) {
 	operator := CreateTestUserSuperAdmin()
 
 	mine := CreateTestOrg("mine-listing.com")
-	admin := CreateTestUserOrgAdmin(mine)
+	admin := createTestClient(t, operator, mine, "owner@mine-listing.com")
 	adminLogin := LoginTestUser(admin.ID)
 	theirs := CreateTestOrg("theirs-listing.com")
-	CreateTestUserOrgAdmin(theirs)
+	createTestClient(t, operator, theirs, "owner@theirs-listing.com")
 
 	payload := `{"name": "Mine Too"}`
 	req := NewHTTPRequest("POST", "/organization/my/", adminLogin.UserID, bytes.NewBufferString(payload))
@@ -200,6 +224,24 @@ func TestPlainUserCannotCreateOrganization(t *testing.T) {
 
 	payload := `{"name": "Not Allowed"}`
 	req := NewHTTPRequest("POST", "/organization/my/", userLogin.UserID, bytes.NewBufferString(payload))
+	res := ExecuteTestRequest(req)
+	CheckTestResponseCode(t, http.StatusForbidden, res.Code)
+}
+
+// A client can hand administrator rights to a colleague so the two of them run
+// the workspace together. That colleague is not the platform's customer, and a
+// workspace they opened would answer to nobody the operator has on file.
+func TestPromotedStaffCannotCreateOrganization(t *testing.T) {
+	ClearTestDB()
+	operator := CreateTestUserSuperAdmin()
+	org := CreateTestOrg("promoted-staff.com")
+	createTestClient(t, operator, org, "owner@promoted-staff.com")
+
+	colleague := CreateTestUserInOrgWithName(org, "colleague@promoted-staff.com", UserRoleOrgAdmin)
+	colleagueLogin := LoginTestUser(colleague.ID)
+
+	payload := `{"name": "Not Their Workspace"}`
+	req := NewHTTPRequest("POST", "/organization/my/", colleagueLogin.UserID, bytes.NewBufferString(payload))
 	res := ExecuteTestRequest(req)
 	CheckTestResponseCode(t, http.StatusForbidden, res.Code)
 }

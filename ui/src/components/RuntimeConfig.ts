@@ -33,6 +33,8 @@ interface RuntimeUserInfos {
   superAdmin: boolean;
   spaceAdmin: boolean;
   orgAdmin: boolean;
+  // the platform's own customer, who may open further workspaces
+  client: boolean;
   pluginMenuItems: any[];
   pluginWelcomeScreens: any[];
   featureGroups: boolean;
@@ -91,6 +93,7 @@ export default class RuntimeConfig {
       superAdmin: false,
       spaceAdmin: false,
       orgAdmin: false,
+      client: false,
       pluginMenuItems: [],
       pluginWelcomeScreens: [],
       featureGroups: false,
@@ -259,6 +262,7 @@ export default class RuntimeConfig {
     RuntimeConfig.INFOS.superAdmin = user.superAdmin;
     RuntimeConfig.INFOS.spaceAdmin = user.spaceAdmin;
     RuntimeConfig.INFOS.orgAdmin = user.admin;
+    RuntimeConfig.INFOS.client = user.client;
     RuntimeConfig.INFOS.idpLogin = !user.requirePassword;
     RuntimeConfig.INFOS.totpEnabled = user.totpEnabled;
     RuntimeConfig.INFOS.hasPasskeys = user.hasPasskeys;
