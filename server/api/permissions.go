@@ -36,6 +36,15 @@ const (
 	PermissionAuthProviders   Permission = "auth_providers"
 	PermissionOrgSettings     Permission = "org_settings"
 	PermissionAuditLog        Permission = "audit_log"
+
+	// PermissionPlatform governs running the platform itself: the client
+	// directory, and the organizations opened on clients' behalf. It is
+	// deliberately absent from builtInPermissions, so that it is neither
+	// offered in the roles screen nor swept up by the catalogue-wide grant a
+	// system role carries - an organization administrator inside a client's
+	// workspace must never acquire it. It is registered all the same, because
+	// an unregistered permission is dropped when effective access is resolved.
+	PermissionPlatform Permission = "platform"
 )
 
 const PluginPermissionPrefix = "plugin."
@@ -96,10 +105,18 @@ var (
 	permissionRegistryMx sync.RWMutex
 )
 
+// platformPermission is known to the registry but absent from the catalogue.
+// See PermissionPlatform for why it is kept out of builtInPermissions.
+var platformPermission = PermissionDefinition{
+	Key:           PermissionPlatform,
+	AllowedLevels: []PermissionLevel{PermissionLevelNone, PermissionLevelAdmin},
+}
+
 func init() {
 	for _, d := range builtInPermissions {
 		permissionRegistry[d.Key] = d
 	}
+	permissionRegistry[platformPermission.Key] = platformPermission
 }
 
 // RegisterPermission adds or replaces a plugin-contributed permission.

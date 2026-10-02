@@ -700,19 +700,26 @@ func (a *App) InitializeDefaultOrg() {
 		GetOrganizationRepository().Create(org)
 		GetOrganizationRepository().AddDomain(org, domain, true)
 		GetOrganizationRepository().SetPrimaryDomain(org, domain)
+		// The bootstrap organization belongs to the platform operator, so its
+		// admin runs the platform: they provision and manage client
+		// organizations. That is what makes this organization the platform
+		// organization rather than a workspace, so it is given no sample data.
 		user := &api.User{
 			OrganizationID: org.ID,
 			Email:          email,
 			HashedPassword: api.NullString(GetUserRepository().GetHashedPassword(config.InitOrgPass)),
-			Firstname:      "Organization",
-			Lastname:       "Admin",
+			Firstname:      "Platform",
+			Lastname:       "Operator",
 		}
 		GetUserRepository().Create(user)
 		orgAdminRoleID, _, _ := GetRoleRepository().EnsureBuiltInRoles(org.ID)
 		if err := GetUserRoleRepository().Add(user.ID, orgAdminRoleID, api.RoleAssignmentSourceManual); err != nil {
 			log.Println(err)
 		}
-		GetOrganizationRepository().CreateSampleData(org)
+		platformRoleID := GetRoleRepository().EnsurePlatformOperatorRole(org.ID)
+		if err := GetUserRoleRepository().Add(user.ID, platformRoleID, api.RoleAssignmentSourceManual); err != nil {
+			log.Println(err)
+		}
 	}
 }
 

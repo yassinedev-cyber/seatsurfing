@@ -525,6 +525,18 @@ func CanAccessOrg(user *User, organizationID string) bool {
 	return service.CanAccessOrg(user, organizationID)
 }
 
+// CanManagePlatform reports whether the user runs the platform itself.
+// See service.CanManagePlatform.
+func CanManagePlatform(user *User) bool {
+	return service.CanManagePlatform(user)
+}
+
+// IsPlatformClient reports whether the user is one of the platform's own
+// customers. See service.IsPlatformClient.
+func IsPlatformClient(user *User) bool {
+	return service.IsPlatformClient(user)
+}
+
 func IsTotpEnforcedForUser(user *User) bool {
 	// A second factor cannot apply to an account that authenticates with a
 	// header on every request and never sees an interactive login. Enforcing

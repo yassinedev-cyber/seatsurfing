@@ -351,6 +351,10 @@ const (
 	RoleNameOrgAdmin       = "Organization Administrator"
 	RoleNameFloorPlanAdmin = "Floor Plan Administrator"
 	RoleNameApiAccess      = "API access"
+	// RoleNamePlatformOperator grants PermissionPlatform and exists only in the
+	// operator's own organization. It is what makes that organization the
+	// platform organization rather than a workspace somebody bought.
+	RoleNamePlatformOperator = "Platform Operator"
 )
 
 type Role struct {

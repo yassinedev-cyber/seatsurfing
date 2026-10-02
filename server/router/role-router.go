@@ -261,6 +261,14 @@ func (router *RoleRouter) parsePermissions(w http.ResponseWriter, m map[string]i
 		if PermissionLevel(level) == PermissionLevelNone {
 			continue
 		}
+		// The platform permission is registered but deliberately outside the
+		// catalogue, so it would pass the level check below. Running the
+		// platform is not something an organization can grant itself: it is
+		// seeded on the operator's own role and nowhere else.
+		if Permission(key) == PermissionPlatform {
+			SendBadRequest(w)
+			return nil, false
+		}
 		if !IsValidPermissionLevel(Permission(key), PermissionLevel(level)) {
 			SendBadRequest(w)
 			return nil, false

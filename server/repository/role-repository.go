@@ -114,6 +114,19 @@ func (r *RoleStore) EnsureBuiltInRoles(organizationID string) (orgAdminRoleID, f
 	return orgAdminRoleID, floorPlanRoleID, apiRoleID
 }
 
+// EnsurePlatformOperatorRole seeds the role that grants PermissionPlatform.
+//
+// It is seeded on request rather than from EnsureBuiltInRoles, because only
+// the operator's own organization may hold it: seeding it everywhere would put
+// the platform within reach of every organization administrator. Marked a
+// system role so that it can neither be edited nor deleted from the roles
+// screen of the organization it lives in.
+func (r *RoleStore) EnsurePlatformOperatorRole(organizationID string) string {
+	return r.seedRole(organizationID, RoleNamePlatformOperator,
+		"Runs the platform: the client directory and the organizations opened for clients.",
+		true, map[Permission]PermissionLevel{PermissionPlatform: PermissionLevelAdmin})
+}
+
 // migrateLegacyRoles seeds the built-in roles for every organization and
 // assigns them according to each user's legacy users.role value, so that
 // effective access is unchanged by the upgrade.

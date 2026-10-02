@@ -237,6 +237,30 @@ func (r *UserStore) GetUsersWithEmail(email string) ([]*User, error) {
 	return result, nil
 }
 
+// IsPlatformOrganization reports whether an organization is the one the
+// platform operator's own account lives in.
+//
+// That organization is not a workspace anyone bought. It exists only to hold
+// the operator's account and the directory of client records, because every
+// user row must belong to an organization. It is therefore never presented as
+// an organization: not in the operator's own list of client organizations, and
+// not in the switcher of a client whose directory entry happens to live there.
+//
+// An organization is the platform organization when somebody in it holds
+// PermissionPlatform, which only RoleNamePlatformOperator grants. Asked per
+// organization rather than resolved to a single id, so it stays correct when
+// the operator has more than one member of staff.
+func (r *UserStore) IsPlatformOrganization(organizationID string) bool {
+	var num int
+	err := GetDatabase().DB().QueryRow("SELECT COUNT(*) "+
+		"FROM users u "+
+		"INNER JOIN user_roles ur ON ur.user_id = u.id "+
+		"INNER JOIN role_permissions rp ON rp.role_id = ur.role_id "+
+		"WHERE u.organization_id = $1 AND rp.permission = $2 AND rp.level >= $3",
+		organizationID, string(PermissionPlatform), int(PermissionLevelAdmin)).Scan(&num)
+	return err == nil && num > 0
+}
+
 func (r *UserStore) GetByKeyword(organizationID string, keyword string) ([]*User, error) {
 	var result []*User
 	rows, err := GetDatabase().DB().Query("SELECT id, organization_id, email, account_type, password, auth_provider_id, disabled, ban_expiry, firstname, lastname, last_activity_at_utc, totp_secret, password_pending, password_update_required, api_token "+
