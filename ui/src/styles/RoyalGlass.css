@@ -1,0 +1,1893 @@
+/* ==========================================================================
+   ROYAL GLASS — aesthetic reskin layer for Seatsurfing
+   Two themes driven by [data-bs-theme] on <html> (synced to OS preference):
+     - dark:  "Midnight Monarch"  (sapphire glass, champagne gold)
+     - light: "Daylight Palace"   (pearl marble, royal navy, gold highlights)
+   This sheet is imported LAST and only restyles surfaces, type and controls.
+   The interactive floorplan/map (.container-map, .space-*, FloorPlanDesigner,
+   react-zoom-pan-pinch, react-moveable) is intentionally left untouched.
+   ========================================================================== */
+
+/* ----- Self-hosted fonts (CSP: default-src 'self') ----------------------- */
+
+@font-face {
+  font-family: "Playfair Display";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("/ui/fonts/PlayfairDisplay-Var.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/ui/fonts/Inter-Var.woff2") format("woff2");
+}
+
+/* ----- Design tokens ------------------------------------------------------ */
+
+:root {
+  --rg-serif: "Playfair Display", Georgia, "Times New Roman", serif;
+  --rg-sans:
+    "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+
+  /* Daylight Palace (light, default) */
+  --rg-text: #111111;
+  --rg-text-2: #5c677d;
+  --rg-accent: #0a1128; /* primary actions: deep royal navy */
+  --rg-gold: #fb923c; /* reserved for VIP highlights */
+  --rg-brass: #f97316;
+
+  --rg-page-bg: linear-gradient(180deg, #f8f9fa 0%, #f5f2e9 58%, #f0eedb 100%);
+  --rg-panel: rgba(255, 255, 255, 0.55);
+  --rg-panel-strong: rgba(255, 255, 255, 0.72);
+  --rg-nav: rgba(252, 252, 250, 0.68);
+  --rg-glass-border: rgba(255, 255, 255, 0.95);
+  --rg-hairline: rgba(10, 17, 40, 0.1);
+  --rg-hairline-strong: rgba(10, 17, 40, 0.18);
+  --rg-specular: rgba(255, 255, 255, 0.9);
+  --rg-goldglow: 0 0 0 rgba(0, 0, 0, 0); /* no inner glow in daylight */
+  --rg-shadow:
+    0 24px 50px -30px rgba(10, 17, 40, 0.28),
+    0 6px 18px -12px rgba(10, 17, 40, 0.14);
+  --rg-shadow-hover:
+    0 30px 60px -28px rgba(10, 17, 40, 0.34),
+    0 10px 24px -14px rgba(10, 17, 40, 0.18);
+  --rg-field: rgba(255, 255, 255, 0.75);
+  --rg-field-border: rgba(10, 17, 40, 0.16);
+  --rg-field-focus-border: rgba(10, 17, 40, 0.45);
+  --rg-focus-ring: rgba(10, 17, 40, 0.08);
+  --rg-tint: rgba(251, 146, 60, 0.09);
+  --rg-tint-strong: rgba(251, 146, 60, 0.16);
+  --rg-veil: rgba(248, 249, 250, 0.5);
+
+  /* Bootstrap variable bridge */
+  --bs-body-color: var(--rg-text);
+  --bs-primary: #0a1128;
+  --bs-primary-rgb: 10, 17, 40;
+  --bs-link-color: #0a1128;
+  --bs-link-color-rgb: 10, 17, 40;
+  --bs-link-hover-color: #37415f;
+  --bs-link-hover-color-rgb: 55, 65, 95;
+  --bs-border-color: var(--rg-hairline-strong);
+}
+
+[data-bs-theme="dark"] {
+  color-scheme: dark;
+
+  /* Midnight Monarch */
+  --rg-text: #e5e5e5;
+  --rg-text-2: #a0aab2;
+  --rg-accent: #fb923c; /* primary actions: champagne gold */
+  --rg-gold: #fb923c;
+  --rg-brass: #f97316;
+
+  --rg-page-bg:
+    radial-gradient(
+      1100px 700px at 85% -10%,
+      rgba(251, 146, 60, 0.09),
+      transparent 60%
+    ),
+    linear-gradient(180deg, #0a1128 0%, #131b3a 55%, #1c2541 100%);
+  --rg-panel: rgba(13, 20, 44, 0.6);
+  --rg-panel-strong: rgba(13, 20, 44, 0.78);
+  --rg-nav: rgba(10, 17, 40, 0.66);
+  --rg-glass-border: rgba(251, 146, 60, 0.28);
+  --rg-hairline: rgba(251, 146, 60, 0.16);
+  --rg-hairline-strong: rgba(251, 146, 60, 0.3);
+  --rg-specular: rgba(255, 255, 255, 0.09);
+  --rg-goldglow: inset 0 0 48px rgba(251, 146, 60, 0.05);
+  --rg-shadow:
+    0 24px 60px -28px rgba(2, 6, 20, 0.9), 0 4px 16px -8px rgba(2, 6, 20, 0.5);
+  --rg-shadow-hover:
+    0 32px 70px -30px rgba(2, 6, 20, 0.95), 0 8px 22px -10px rgba(2, 6, 20, 0.6);
+  --rg-field: rgba(8, 13, 32, 0.55);
+  --rg-field-border: rgba(251, 146, 60, 0.22);
+  --rg-field-focus-border: rgba(251, 146, 60, 0.55);
+  --rg-focus-ring: rgba(251, 146, 60, 0.12);
+  --rg-tint: rgba(251, 146, 60, 0.1);
+  --rg-tint-strong: rgba(251, 146, 60, 0.17);
+  --rg-veil: rgba(10, 17, 40, 0.55);
+
+  --bs-body-color: var(--rg-text);
+  --bs-primary: #fb923c;
+  --bs-primary-rgb: 251, 146, 60;
+  --bs-link-color: #fb923c;
+  --bs-link-color-rgb: 251, 146, 60;
+  --bs-link-hover-color: #fcae6b;
+  --bs-link-hover-color-rgb: 227, 197, 96;
+  --bs-border-color: var(--rg-hairline-strong);
+  --bs-secondary-color: var(--rg-text-2);
+}
+
+/* ----- Page canvas & typography ------------------------------------------ */
+
+body {
+  background: var(--rg-page-bg) fixed;
+  color: var(--rg-text);
+  font-family: var(--rg-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.modal-title,
+legend,
+.rbc-toolbar-label {
+  font-family: var(--rg-serif);
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  color: var(--rg-text);
+}
+
+/* champagne rule beneath page headers */
+h2::after {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 2px;
+  margin-top: 0.45rem;
+  border-radius: 1px;
+  background: linear-gradient(90deg, var(--rg-gold), transparent);
+}
+
+.center h2::after {
+  margin-left: auto;
+  margin-right: auto;
+  background: linear-gradient(90deg, transparent, var(--rg-gold), transparent);
+}
+
+/* the signed-in name in the top bar, set like an engraved greeting */
+.navbar .nav-link.pe-none span {
+  font-family: var(--rg-serif);
+  font-style: italic;
+  font-size: 1.05em;
+  letter-spacing: 0.02em;
+}
+
+.text-muted,
+.copyright-footer,
+.sidebar-heading {
+  color: var(--rg-text-2) !important;
+}
+
+.sidebar-heading {
+  font-family: var(--rg-sans);
+  font-weight: 650;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+}
+
+/* legacy hardcoded light backdrops -> let the palace/monarch canvas show */
+.container-signin,
+.container-center,
+.container-center-top,
+#root-loading {
+  background-color: transparent;
+}
+
+#root-loading {
+  color: var(--rg-text);
+}
+
+.loading-overlay {
+  background-color: var(--rg-veil);
+}
+
+/* ----- Top navigation: floating frosted bar ------------------------------ */
+
+.navbar.fixed-top,
+.navbar.sticky-top {
+  background: var(--rg-nav) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border-bottom: 1px solid var(--rg-hairline);
+  box-shadow: 0 14px 40px -26px rgba(4, 8, 24, 0.55);
+}
+
+/* keep any customer logo legible on midnight glass */
+html:not([data-bs-theme="dark"]) .brand-dark {
+  display: none !important;
+}
+
+[data-bs-theme="dark"] .brand-light {
+  display: none !important;
+}
+
+[data-bs-theme="dark"] img.brand-custom {
+  filter: brightness(0) invert(0.92) sepia(0.14) saturate(1.6);
+}
+
+/* Admin top bar: royal navy glass with a gold hairline, both themes */
+.admin-navbar.navbar.bg-dark {
+  background: linear-gradient(
+    180deg,
+    rgba(10, 17, 40, 0.94),
+    rgba(19, 27, 58, 0.88)
+  ) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  backdrop-filter: blur(18px) saturate(160%);
+  border-bottom: 1px solid rgba(251, 146, 60, 0.28);
+}
+
+.admin-navbar .navbar-brand {
+  box-shadow: inset -1px 0 0 rgba(251, 146, 60, 0.25);
+}
+
+.admin-navbar .form-control-dark {
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.6rem;
+}
+
+.admin-navbar form input {
+  color: #e5e5e5;
+}
+
+.admin-navbar form input::placeholder {
+  color: rgba(229, 229, 229, 0.55);
+}
+
+.admin-navbar .form-control-dark:focus {
+  border-color: rgba(251, 146, 60, 0.6);
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.22);
+}
+
+/* ----- Sidebar: tall glass panel ----------------------------------------- */
+
+.sidebar.bg-light {
+  background: var(--rg-panel) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  box-shadow:
+    inset -1px 0 0 var(--rg-hairline),
+    14px 0 44px -34px rgba(4, 8, 24, 0.5);
+}
+
+.sidebar .nav-link {
+  color: var(--rg-text-2);
+}
+
+.sidebar .nav-link:hover {
+  color: var(--rg-text);
+}
+
+.sidebar .nav-link .feather {
+  color: var(--rg-text-2);
+  opacity: 0.75;
+}
+
+.sidebar .nav-link.active {
+  color: var(--rg-accent);
+  background: linear-gradient(90deg, var(--rg-tint), transparent 70%);
+  box-shadow: inset 3px 0 0 var(--rg-gold);
+}
+
+.sidebar .nav-link.disabled {
+  color: var(--rg-text-2);
+  opacity: 0.45;
+}
+
+/* ----- Cards: floating frosted panels ------------------------------------ */
+
+.card {
+  --bs-card-bg: transparent;
+  --bs-card-border-color: var(--rg-glass-border);
+  --bs-card-cap-bg: transparent;
+  background: var(--rg-panel);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  border: 1px solid var(--rg-glass-border);
+  border-radius: 1rem;
+  box-shadow:
+    var(--rg-shadow),
+    inset 0 1px 0 var(--rg-specular),
+    var(--rg-goldglow);
+  color: var(--rg-text);
+}
+
+.card .card-header,
+.card .card-footer {
+  border-color: var(--rg-hairline);
+}
+
+.dashboard-card-clickable:hover {
+  background: var(--rg-tint-strong);
+  box-shadow:
+    var(--rg-shadow-hover),
+    inset 0 1px 0 var(--rg-specular),
+    var(--rg-goldglow);
+  transform: translateY(-2px);
+}
+
+.dashboard-number {
+  font-weight: 320;
+  font-variant-numeric: tabular-nums;
+  color: var(--rg-accent);
+}
+
+/* ----- Modals: the VIP chamber ------------------------------------------- */
+
+.modal-content {
+  background: var(--rg-panel-strong);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
+  backdrop-filter: blur(28px) saturate(160%);
+  border: 1px solid var(--rg-glass-border);
+  border-radius: 1.25rem;
+  box-shadow:
+    0 40px 90px -28px rgba(4, 8, 24, 0.6),
+    inset 0 1px 0 var(--rg-specular),
+    var(--rg-goldglow);
+  color: var(--rg-text);
+}
+
+.modal-header,
+.modal-footer {
+  border-color: var(--rg-hairline);
+}
+
+.modal-backdrop.show {
+  background: rgba(4, 8, 24, 0.45);
+  -webkit-backdrop-filter: blur(9px) saturate(120%);
+  backdrop-filter: blur(9px) saturate(120%);
+  opacity: 1;
+}
+
+[data-bs-theme="dark"] .btn-close {
+  filter: invert(1) grayscale(100%) brightness(180%);
+}
+
+/* ----- Dropdown menus ----------------------------------------------------- */
+
+.dropdown-menu {
+  --bs-dropdown-bg: transparent;
+  --bs-dropdown-link-color: var(--rg-text);
+  --bs-dropdown-link-hover-bg: var(--rg-tint);
+  --bs-dropdown-link-hover-color: var(--rg-text);
+  --bs-dropdown-link-active-bg: var(--rg-tint-strong);
+  --bs-dropdown-link-active-color: var(--rg-accent);
+  background: var(--rg-panel-strong);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid var(--rg-glass-border);
+  border-radius: 0.9rem;
+  box-shadow:
+    var(--rg-shadow),
+    inset 0 1px 0 var(--rg-specular);
+}
+
+/* ----- Buttons: heavy polished keys --------------------------------------- */
+
+.btn {
+  border-radius: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.btn:focus-visible {
+  box-shadow: 0 0 0 3px var(--rg-focus-ring);
+}
+
+/* primary: navy key in daylight */
+.btn-primary {
+  --bs-btn-color: #f8f9fa;
+  --bs-btn-bg: #0a1128;
+  --bs-btn-border-color: rgba(10, 17, 40, 0.9);
+  --bs-btn-hover-color: #ffffff;
+  --bs-btn-hover-bg: #16204a;
+  --bs-btn-hover-border-color: #16204a;
+  --bs-btn-active-color: #ffffff;
+  --bs-btn-active-bg: #060b1d;
+  --bs-btn-active-border-color: #060b1d;
+  --bs-btn-disabled-color: #f8f9fa;
+  --bs-btn-disabled-bg: #0a1128;
+  --bs-btn-disabled-border-color: #0a1128;
+  --bs-btn-focus-shadow-rgb: 251, 146, 60;
+  background-image: linear-gradient(180deg, #1a2450 0%, #0a1128 100%);
+  box-shadow:
+    0 12px 26px -12px rgba(10, 17, 40, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.btn-primary:hover {
+  background-image: linear-gradient(180deg, #222d5e 0%, #131c3f 100%);
+}
+
+.btn-primary:active,
+.btn-primary.active,
+.btn-primary:first-child:active {
+  background-image: linear-gradient(180deg, #0a1128 0%, #060b1d 100%);
+  transform: translateY(1px);
+  box-shadow:
+    0 6px 14px -8px rgba(10, 17, 40, 0.6),
+    inset 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+/* primary: champagne-gold key at midnight */
+[data-bs-theme="dark"] .btn-primary {
+  --bs-btn-color: #0a1128;
+  --bs-btn-bg: #fb923c;
+  --bs-btn-border-color: rgba(255, 255, 255, 0.28);
+  --bs-btn-hover-color: #0a1128;
+  --bs-btn-hover-bg: #fca55d;
+  --bs-btn-hover-border-color: rgba(255, 255, 255, 0.35);
+  --bs-btn-active-color: #0a1128;
+  --bs-btn-active-bg: #f97316;
+  --bs-btn-active-border-color: rgba(255, 255, 255, 0.2);
+  --bs-btn-disabled-color: #0a1128;
+  --bs-btn-disabled-bg: #fb923c;
+  --bs-btn-disabled-border-color: rgba(255, 255, 255, 0.2);
+  background-image: linear-gradient(
+    180deg,
+    #fdba74 0%,
+    #fb923c 55%,
+    #f97316 100%
+  );
+  box-shadow:
+    0 14px 30px -12px rgba(251, 146, 60, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -2px 4px rgba(64, 44, 0, 0.28);
+}
+
+[data-bs-theme="dark"] .btn-primary:hover {
+  background-image: linear-gradient(
+    180deg,
+    #fed7aa 0%,
+    #fca55d 55%,
+    #f08636 100%
+  );
+}
+
+[data-bs-theme="dark"] .btn-primary:active,
+[data-bs-theme="dark"] .btn-primary.active,
+[data-bs-theme="dark"] .btn-primary:first-child:active {
+  background-image: linear-gradient(180deg, #ef7c2a 0%, #f97316 100%);
+  transform: translateY(1px);
+  box-shadow:
+    0 6px 16px -10px rgba(251, 146, 60, 0.5),
+    inset 0 1px 2px rgba(64, 44, 0, 0.4);
+}
+
+/* secondary: quiet glass */
+.btn-secondary {
+  --bs-btn-color: var(--rg-text);
+  --bs-btn-bg: transparent;
+  --bs-btn-border-color: var(--rg-hairline-strong);
+  --bs-btn-hover-color: var(--rg-text);
+  --bs-btn-hover-bg: var(--rg-tint);
+  --bs-btn-hover-border-color: var(--rg-hairline-strong);
+  --bs-btn-active-color: var(--rg-text);
+  --bs-btn-active-bg: var(--rg-tint-strong);
+  --bs-btn-active-border-color: var(--rg-hairline-strong);
+  --bs-btn-disabled-color: var(--rg-text-2);
+  --bs-btn-disabled-bg: transparent;
+  --bs-btn-disabled-border-color: var(--rg-hairline);
+  background-color: var(--rg-field);
+}
+
+.btn-outline-dark,
+.btn-outline-secondary {
+  --bs-btn-color: var(--rg-text);
+  --bs-btn-border-color: var(--rg-hairline-strong);
+  --bs-btn-hover-color: var(--rg-text);
+  --bs-btn-hover-bg: var(--rg-tint);
+  --bs-btn-hover-border-color: var(--rg-field-focus-border);
+  --bs-btn-active-color: var(--rg-text);
+  --bs-btn-active-bg: var(--rg-tint-strong);
+  --bs-btn-active-border-color: var(--rg-field-focus-border);
+  --bs-btn-disabled-color: var(--rg-text-2);
+  --bs-btn-disabled-border-color: var(--rg-hairline);
+}
+
+.container-search-config .btn-outline-dark:hover {
+  background-color: var(--rg-tint);
+}
+
+.btn-link {
+  --bs-btn-color: var(--rg-accent);
+  --bs-btn-hover-color: var(--rg-accent);
+}
+
+.active-transparent:active,
+.active-transparent:focus {
+  color: var(--rg-accent) !important;
+}
+
+/* ----- Forms: engraved glass fields --------------------------------------- */
+
+.form-control,
+.form-select,
+.flatpickr-input {
+  background-color: var(--rg-field);
+  border: 1px solid var(--rg-field-border);
+  border-radius: 0.6rem;
+  color: var(--rg-text);
+}
+
+.form-control::placeholder,
+.flatpickr-input::placeholder {
+  color: var(--rg-text-2);
+}
+
+.form-control:focus,
+.form-select:focus,
+.flatpickr-input:focus {
+  background-color: var(--rg-field);
+  border-color: var(--rg-field-focus-border);
+  box-shadow: 0 0 0 3px var(--rg-focus-ring);
+  color: var(--rg-text);
+}
+
+.form-signin .form-control:focus {
+  box-shadow: 0 0 0 3px var(--rg-focus-ring);
+}
+
+.input-group-text {
+  background-color: var(--rg-field);
+  border: 1px solid var(--rg-field-border);
+  color: var(--rg-text-2);
+}
+
+.form-check-input {
+  background-color: var(--rg-field);
+  border-color: var(--rg-field-border);
+}
+
+.form-check-input:checked {
+  background-color: var(--rg-accent);
+  border-color: var(--rg-accent);
+}
+
+.form-check-input:focus {
+  border-color: var(--rg-field-focus-border);
+  box-shadow: 0 0 0 3px var(--rg-focus-ring);
+}
+
+/* ----- Login: glass invitation card --------------------------------------- */
+
+.form-signin {
+  background: var(--rg-panel);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  backdrop-filter: blur(24px) saturate(150%);
+  border: 1px solid var(--rg-glass-border);
+  border-radius: 1.25rem;
+  box-shadow:
+    var(--rg-shadow),
+    inset 0 1px 0 var(--rg-specular),
+    var(--rg-goldglow);
+  padding: 1.75rem 1.5rem;
+}
+
+/* ----- Search page: floating booking sheet (NOT the map) ------------------ */
+
+.container-search-config {
+  background: var(--rg-panel-strong);
+  -webkit-backdrop-filter: blur(26px) saturate(160%);
+  backdrop-filter: blur(26px) saturate(160%);
+  border: 1px solid var(--rg-glass-border);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  box-shadow:
+    0 -18px 50px -30px rgba(4, 8, 24, 0.55),
+    inset 0 1px 0 var(--rg-specular),
+    var(--rg-goldglow);
+  opacity: 1;
+}
+
+.search-hint-banner {
+  background: var(--rg-panel-strong);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--rg-glass-border);
+  border-bottom: none;
+  box-shadow: 0 -12px 36px -26px rgba(4, 8, 24, 0.5);
+  opacity: 1;
+}
+
+/* ----- Tables: ledger on glass -------------------------------------------- */
+
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-color: var(--rg-text);
+  --bs-table-border-color: var(--rg-hairline);
+  --bs-table-striped-bg: var(--rg-tint);
+  --bs-table-striped-color: var(--rg-text);
+  --bs-table-hover-bg: var(--rg-tint);
+  --bs-table-hover-color: var(--rg-text);
+  --bs-table-active-bg: var(--rg-tint-strong);
+  --bs-table-active-color: var(--rg-text);
+}
+
+.table thead th {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--rg-text-2);
+  border-bottom: 2px solid var(--rg-hairline-strong);
+}
+
+/* ----- List groups (booking lists; space colors stay functional) ---------- */
+
+.list-group {
+  --bs-list-group-bg: var(--rg-panel);
+  --bs-list-group-color: var(--rg-text);
+  --bs-list-group-border-color: var(--rg-hairline);
+  --bs-list-group-action-hover-bg: var(--rg-tint);
+  --bs-list-group-action-hover-color: var(--rg-text);
+  --bs-list-group-action-active-bg: var(--rg-tint-strong);
+  --bs-list-group-action-active-color: var(--rg-text);
+  border-radius: 0.9rem;
+}
+
+/* ----- Alerts & badges ----------------------------------------------------- */
+
+.alert {
+  border-radius: 0.9rem;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.badge {
+  border-radius: 0.5rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ----- react-big-calendar (bookings/search agenda) ------------------------- */
+
+.rbc-toolbar button {
+  color: var(--rg-text);
+  background: var(--rg-field);
+  border: 1px solid var(--rg-hairline-strong);
+  border-radius: 0.6rem;
+}
+
+.rbc-toolbar button:hover,
+.rbc-toolbar button:focus {
+  color: var(--rg-text);
+  background: var(--rg-tint);
+  border-color: var(--rg-field-focus-border);
+}
+
+.rbc-toolbar button.rbc-active,
+.rbc-toolbar button:active {
+  color: var(--rg-accent);
+  background: var(--rg-tint-strong);
+  border-color: var(--rg-field-focus-border);
+  box-shadow: none;
+}
+
+.rbc-event {
+  background: linear-gradient(180deg, #1a2450 0%, #0a1128 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+[data-bs-theme="dark"] .rbc-event {
+  background: linear-gradient(180deg, #fdba74 0%, #fb923c 60%, #f97316 100%);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #0a1128;
+}
+
+[data-bs-theme="dark"] .rbc-calendar {
+  color: var(--rg-text);
+}
+
+[data-bs-theme="dark"] .rbc-month-view,
+[data-bs-theme="dark"] .rbc-time-view,
+[data-bs-theme="dark"] .rbc-agenda-view table.rbc-agenda-table,
+[data-bs-theme="dark"] .rbc-header,
+[data-bs-theme="dark"] .rbc-day-bg,
+[data-bs-theme="dark"] .rbc-month-row,
+[data-bs-theme="dark"] .rbc-time-content,
+[data-bs-theme="dark"] .rbc-time-header-content,
+[data-bs-theme="dark"] .rbc-timeslot-group,
+[data-bs-theme="dark"] .rbc-time-header.rbc-overflowing,
+[data-bs-theme="dark"] .rbc-agenda-view table.rbc-agenda-table tbody > tr > td,
+[data-bs-theme="dark"] .rbc-agenda-view table.rbc-agenda-table thead > tr > th,
+[data-bs-theme="dark"] .rbc-day-slot .rbc-time-slot {
+  border-color: rgba(251, 146, 60, 0.14);
+}
+
+[data-bs-theme="dark"] .rbc-off-range-bg {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-bs-theme="dark"] .rbc-today {
+  background: rgba(251, 146, 60, 0.1);
+}
+
+/* ----- flatpickr popup (airbnb theme) dark support ------------------------- */
+
+[data-bs-theme="dark"] .flatpickr-calendar {
+  background: #141d3d;
+  border: 1px solid rgba(251, 146, 60, 0.25);
+  box-shadow: 0 30px 70px -24px rgba(2, 6, 20, 0.9);
+  color: var(--rg-text);
+}
+
+[data-bs-theme="dark"] .flatpickr-calendar.arrowTop:before,
+[data-bs-theme="dark"] .flatpickr-calendar.arrowTop:after {
+  border-bottom-color: #141d3d;
+}
+
+[data-bs-theme="dark"] .flatpickr-calendar.arrowBottom:before,
+[data-bs-theme="dark"] .flatpickr-calendar.arrowBottom:after {
+  border-top-color: #141d3d;
+}
+
+[data-bs-theme="dark"] .flatpickr-months .flatpickr-month,
+[data-bs-theme="dark"] .flatpickr-current-month input.cur-year,
+[data-bs-theme="dark"] .flatpickr-current-month .flatpickr-monthDropdown-months,
+[data-bs-theme="dark"] .flatpickr-weekdays,
+[data-bs-theme="dark"] span.flatpickr-weekday {
+  background: transparent;
+  color: var(--rg-text-2);
+  fill: var(--rg-text-2);
+}
+
+[data-bs-theme="dark"] .flatpickr-months .flatpickr-prev-month,
+[data-bs-theme="dark"] .flatpickr-months .flatpickr-next-month {
+  color: var(--rg-text-2);
+  fill: var(--rg-text-2);
+}
+
+[data-bs-theme="dark"] .flatpickr-day {
+  color: var(--rg-text);
+}
+
+[data-bs-theme="dark"] .flatpickr-day.prevMonthDay,
+[data-bs-theme="dark"] .flatpickr-day.nextMonthDay,
+[data-bs-theme="dark"] .flatpickr-day.flatpickr-disabled,
+[data-bs-theme="dark"] .flatpickr-day.flatpickr-disabled:hover {
+  color: rgba(160, 170, 178, 0.4);
+}
+
+[data-bs-theme="dark"] .flatpickr-day:hover,
+[data-bs-theme="dark"] .flatpickr-day.inRange {
+  background: rgba(251, 146, 60, 0.14);
+  border-color: transparent;
+  box-shadow: none;
+}
+
+[data-bs-theme="dark"] .flatpickr-day.today {
+  border-color: #fb923c;
+}
+
+[data-bs-theme="dark"] .flatpickr-day.selected,
+[data-bs-theme="dark"] .flatpickr-day.startRange,
+[data-bs-theme="dark"] .flatpickr-day.endRange,
+[data-bs-theme="dark"] .flatpickr-day.selected:hover,
+[data-bs-theme="dark"] .flatpickr-day.startRange:hover,
+[data-bs-theme="dark"] .flatpickr-day.endRange:hover {
+  background: #fb923c;
+  border-color: #fb923c;
+  color: #0a1128;
+}
+
+/* ----- Motion & accessibility ---------------------------------------------- */
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn {
+    transition:
+      transform 0.12s ease,
+      box-shadow 0.2s ease,
+      background-color 0.15s ease,
+      background-image 0.15s ease;
+  }
+
+  .card,
+  .dashboard-card-clickable {
+    transition:
+      transform 0.18s ease,
+      box-shadow 0.25s ease,
+      background-color 0.18s ease;
+  }
+
+  .sidebar .nav-link,
+  .dropdown-item {
+    transition:
+      color 0.15s ease,
+      background-color 0.15s ease;
+  }
+}
+
+a:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--rg-gold);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   MODERN SYSTEM PASS — floating islands, pill navigation, quiet focus
+   ========================================================================== */
+
+/* Top navigation becomes a floating glass island, detached from the edges */
+.navbar.fixed-top {
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  border: 1px solid var(--rg-glass-border);
+  border-radius: 1.1rem;
+  box-shadow:
+    var(--rg-shadow),
+    inset 0 1px 0 var(--rg-specular);
+}
+
+.navbar.fixed-top .container-fluid {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+/* Nav items become pills with breathing room */
+.navbar .navbar-nav {
+  gap: 0.3rem;
+  align-items: center;
+}
+
+.navbar .navbar-nav .nav-link {
+  padding: 0.45rem 0.95rem;
+  border-radius: 999px;
+  line-height: 1.4;
+}
+
+.navbar .navbar-nav .nav-link:hover {
+  background: var(--rg-tint);
+}
+
+.navbar .navbar-nav .nav-link.active {
+  background: var(--rg-tint-strong);
+  color: var(--rg-accent) !important;
+}
+
+/* the signed-in identity reads as a quiet chip */
+.navbar .nav-link.pe-none {
+  background: var(--rg-tint);
+  border: 1px solid var(--rg-hairline);
+  border-radius: 999px;
+  padding: 0.4rem 0.95rem;
+}
+
+/* Booking sheet floats free of the corner, fully rounded */
+.search-config-outer {
+  bottom: 12px;
+  left: 12px;
+  width: calc(100% - 24px);
+}
+
+.container-search-config {
+  border: 1px solid var(--rg-glass-border);
+  border-radius: 18px;
+}
+
+.search-hint-banner {
+  border: 1px solid var(--rg-glass-border);
+  border-radius: 14px;
+}
+
+/* Sidebar links become rounded pills; retire the inset accent bar */
+.sidebar .nav-link {
+  margin: 2px 10px;
+  border-radius: 0.8rem;
+}
+
+.sidebar .nav-link.active {
+  background: var(--rg-tint-strong);
+  box-shadow: none;
+}
+
+.sidebar .nav-link:hover {
+  background: var(--rg-tint);
+}
+
+/* Admin search field as a modern pill */
+.admin-navbar .form-control-dark {
+  border-radius: 999px;
+  padding-left: 1.1rem;
+}
+
+/* Focus: the border carries the state; the ring is a whisper */
+.form-control:focus,
+.form-select:focus,
+.flatpickr-input:focus {
+  box-shadow: 0 0 0 3px var(--rg-focus-ring);
+}
+
+/* ==========================================================================
+   THE ROYAL BLUEPRINT — search page map PRESENTATION only.
+   The plan image and seat elements inside stay stock; this frames them.
+   ========================================================================== */
+
+/* Drafting-desk mat behind the plan: vellum by day, midnight felt with a
+   faint gold survey grid by night */
+div.bg-body-secondary:has(> .react-transform-wrapper) {
+  background-color: transparent !important;
+  background-image:
+    radial-gradient(rgba(10, 17, 40, 0.09) 1px, transparent 1.4px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(240, 238, 219, 0.7)) !important;
+  background-size:
+    22px 22px,
+    100% 100%;
+  border: 1px solid var(--rg-glass-border);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow:
+    var(--rg-shadow),
+    inset 0 1px 0 var(--rg-specular);
+}
+
+[data-bs-theme="dark"] div.bg-body-secondary:has(> .react-transform-wrapper) {
+  background-image:
+    radial-gradient(rgba(251, 146, 60, 0.1) 1px, transparent 1.4px),
+    radial-gradient(
+      900px 480px at 75% 0%,
+      rgba(251, 146, 60, 0.07),
+      transparent 65%
+    ),
+    linear-gradient(180deg, #0d1430 0%, #101838 100%) !important;
+  background-size:
+    22px 22px,
+    100% 100%,
+    100% 100%;
+}
+
+/* The floorplan reads as a matted print, not a raw slab */
+.react-transform-component.border {
+  border-width: 1px !important;
+  border-color: var(--rg-hairline-strong) !important;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 30px 70px -30px rgba(4, 8, 24, 0.55);
+}
+
+/* Zoom controls become a floating glass instrument cluster */
+div:has(> button[aria-label="Zoom in"]) {
+  background: var(--rg-panel-strong) !important;
+  border: 1px solid var(--rg-glass-border) !important;
+  border-radius: 999px !important;
+  box-shadow: var(--rg-shadow);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+  padding: 4px;
+}
+
+div:has(> button[aria-label="Zoom in"]) .btn {
+  border-color: transparent;
+  border-radius: 999px;
+}
+
+.btn-outline-primary {
+  --bs-btn-color: var(--rg-accent);
+  --bs-btn-border-color: var(--rg-hairline-strong);
+  --bs-btn-hover-color: var(--rg-accent);
+  --bs-btn-hover-bg: var(--rg-tint);
+  --bs-btn-hover-border-color: var(--rg-field-focus-border);
+  --bs-btn-active-color: var(--rg-accent);
+  --bs-btn-active-bg: var(--rg-tint-strong);
+  --bs-btn-active-border-color: var(--rg-field-focus-border);
+  --bs-btn-disabled-color: var(--rg-text-2);
+  --bs-btn-disabled-border-color: var(--rg-hairline);
+}
+
+/* Minimap becomes a glass locket; its viewport indicator turns gold */
+div:has(> .rzpp-mini-map) {
+  background: var(--rg-panel-strong) !important;
+  border: 1px solid var(--rg-glass-border) !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  box-shadow: var(--rg-shadow);
+  padding: 4px;
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  backdrop-filter: blur(18px) saturate(150%);
+}
+
+.rzpp-minimap-preview {
+  border-color: var(--rg-gold) !important;
+  border-radius: 4px;
+}
+
+/* ==========================================================================
+   ICONOGRAPHY & FINAL POLISH — consistent optical icon size, refined stroke,
+   segmented controls instead of legacy tabs, themed pagination & tooltips
+   ========================================================================== */
+
+/* Feather icons: larger optical size, finer stroke, true baseline alignment */
+.feather {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.75;
+  vertical-align: -0.25em;
+}
+
+.feather-lg {
+  width: 22px;
+  height: 22px;
+}
+
+.feather-btn {
+  width: 16px;
+  height: 16px;
+}
+
+.navbar .navbar-nav .nav-link .feather {
+  margin-right: 7px;
+  opacity: 0.85;
+}
+
+.navbar .navbar-nav .nav-link.active .feather {
+  opacity: 1;
+}
+
+.sidebar .nav-link .feather {
+  width: 18px;
+  height: 18px;
+  margin-right: 8px;
+}
+
+/* Booking-sheet pictograms: quiet, consistent */
+.container-search-config .content svg {
+  width: 18px;
+  height: 18px;
+  color: var(--rg-text-2);
+}
+
+/* Legacy boxed tabs become a modern segmented control */
+.nav-tabs {
+  --bs-nav-tabs-border-width: 0;
+  border-bottom: 1px solid var(--rg-hairline);
+  gap: 0.3rem;
+  padding-bottom: 0.5rem;
+}
+
+.nav-tabs .nav-link {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: var(--rg-text-2);
+  padding: 0.45rem 1.05rem;
+  font-weight: 550;
+}
+
+.nav-tabs .nav-link:hover {
+  background: var(--rg-tint);
+  color: var(--rg-text);
+  border-color: transparent;
+}
+
+.nav-tabs .nav-link.active {
+  background: var(--rg-tint-strong);
+  color: var(--rg-accent);
+  border-color: var(--rg-hairline);
+}
+
+.nav-pills {
+  gap: 0.3rem;
+}
+
+.nav-pills .nav-link {
+  border-radius: 999px;
+  color: var(--rg-text-2);
+}
+
+.nav-pills .nav-link.active {
+  background: var(--rg-tint-strong);
+  color: var(--rg-accent);
+}
+
+/* Pagination as quiet glass steps */
+.pagination {
+  --bs-pagination-bg: var(--rg-field);
+  --bs-pagination-border-color: var(--rg-hairline);
+  --bs-pagination-color: var(--rg-text);
+  --bs-pagination-hover-bg: var(--rg-tint);
+  --bs-pagination-hover-color: var(--rg-text);
+  --bs-pagination-hover-border-color: var(--rg-hairline-strong);
+  --bs-pagination-focus-bg: var(--rg-tint);
+  --bs-pagination-focus-color: var(--rg-text);
+  --bs-pagination-focus-box-shadow: 0 0 0 3px var(--rg-focus-ring);
+  --bs-pagination-active-bg: var(--rg-accent);
+  --bs-pagination-active-border-color: var(--rg-accent);
+  --bs-pagination-disabled-bg: transparent;
+  --bs-pagination-disabled-color: var(--rg-text-2);
+  --bs-pagination-disabled-border-color: var(--rg-hairline);
+}
+
+[data-bs-theme="dark"] .pagination {
+  --bs-pagination-active-color: #0a1128;
+}
+
+/* Seat hover tooltip: royal card instead of default black box */
+.react-tooltip {
+  background: rgba(10, 17, 40, 0.94) !important;
+  color: #e5e5e5 !important;
+  border: 1px solid rgba(251, 146, 60, 0.28);
+  border-radius: 10px !important;
+  box-shadow: 0 18px 40px -18px rgba(2, 6, 20, 0.8);
+}
+
+.popover {
+  background: var(--rg-panel-strong);
+  border: 1px solid var(--rg-glass-border);
+  border-radius: 0.9rem;
+  box-shadow: var(--rg-shadow);
+}
+
+/* Underline-variant tabs join the segmented-control language */
+.nav-underline {
+  --bs-nav-underline-border-width: 0;
+  gap: 0.3rem;
+  border-bottom: 1px solid var(--rg-hairline);
+  padding-bottom: 0.5rem;
+}
+
+.nav-underline .nav-link {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  border-bottom: 1px solid transparent;
+  color: var(--rg-text-2);
+  padding: 0.45rem 1.05rem;
+  font-weight: 550;
+}
+
+.nav-underline .nav-link:hover {
+  background: var(--rg-tint);
+  color: var(--rg-text);
+}
+
+.nav-underline .nav-link.active,
+.nav-underline .show > .nav-link {
+  background: var(--rg-tint-strong);
+  color: var(--rg-accent);
+  border-color: var(--rg-hairline);
+  font-weight: 600;
+}
+
+/* Keep nav labels and the identity chip on one line */
+.navbar .nav-link,
+.navbar .nav-link.pe-none span {
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   THEME SWITCH — sun/moon capsule with a sliding key thumb
+   ========================================================================== */
+
+.rg-theme-switch {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: center;
+  width: 60px;
+  height: 30px;
+  padding: 0 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid var(--rg-hairline-strong);
+  border-radius: 999px;
+  background: var(--rg-field);
+  cursor: pointer;
+}
+
+.rg-theme-switch:focus-visible {
+  outline: 2px solid var(--rg-gold);
+  outline-offset: 2px;
+}
+
+.rg-theme-switch .feather {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+  position: relative;
+  z-index: 1;
+  vertical-align: 0;
+}
+
+.rg-theme-switch .rg-sun {
+  color: #f8f9fa; /* sits on the navy thumb in light mode */
+}
+
+.rg-theme-switch .rg-moon {
+  color: var(--rg-text-2);
+  opacity: 0.55;
+}
+
+[data-bs-theme="dark"] .rg-theme-switch .rg-sun {
+  color: var(--rg-text-2);
+  opacity: 0.55;
+}
+
+[data-bs-theme="dark"] .rg-theme-switch .rg-moon {
+  color: #0a1128; /* sits on the champagne thumb in dark mode */
+  opacity: 1;
+}
+
+.rg-theme-switch .rg-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #1a2450, #0a1128);
+  box-shadow:
+    0 2px 6px rgba(4, 8, 24, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+[data-bs-theme="dark"] .rg-theme-switch .rg-thumb {
+  transform: translateX(32px);
+  background: linear-gradient(180deg, #fdba74, #fb923c);
+  box-shadow:
+    0 2px 8px rgba(251, 146, 60, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rg-theme-switch .rg-thumb {
+    transition:
+      transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+      background 0.25s ease;
+  }
+
+  .rg-theme-switch .rg-sun,
+  .rg-theme-switch .rg-moon {
+    transition:
+      color 0.2s ease,
+      opacity 0.2s ease;
+  }
+}
+
+/* ==========================================================================
+   ADMIN COMMAND BAR — adaptive floating glass header for the admin area
+   ========================================================================== */
+
+.admin-navbar.navbar.bg-dark {
+  margin: 10px 12px 8px;
+  border: 1px solid var(--rg-glass-border);
+  border-radius: 1.1rem;
+  background: var(--rg-nav) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  box-shadow:
+    var(--rg-shadow),
+    inset 0 1px 0 var(--rg-specular) !important;
+}
+
+/* brand: retire the boxed divider; adapt the white logo to daylight */
+.admin-navbar .navbar-brand {
+  box-shadow: none;
+}
+
+/* the search becomes a centered command field with an inline glyph */
+.admin-navbar form {
+  display: flex;
+  justify-content: center;
+  padding: 6px 10px;
+}
+
+.admin-navbar .form-control-dark {
+  max-width: 480px;
+  background-color: var(--rg-field);
+  border: 1px solid var(--rg-field-border);
+  color: var(--rg-text);
+  padding-left: 2.35rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%235C677D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: 0.85rem center;
+  background-size: 15px 15px;
+}
+
+[data-bs-theme="dark"] .admin-navbar .form-control-dark {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23a0aab2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+}
+
+.admin-navbar form input {
+  color: var(--rg-text);
+}
+
+.admin-navbar form input::placeholder {
+  color: var(--rg-text-2);
+}
+
+.admin-navbar .form-control-dark:focus {
+  border-color: var(--rg-field-focus-border);
+  box-shadow: 0 0 0 3px var(--rg-focus-ring);
+}
+
+/* right cluster adapts to the glass in both themes */
+.admin-navbar .nav-link {
+  color: var(--rg-text);
+}
+
+.admin-navbar .nav-link:hover {
+  color: var(--rg-accent);
+}
+
+/* clear the floating bar */
+.sidebar {
+  padding-top: 64px;
+}
+
+/* Wider rail: platform and client consoles both carry longer labels than the
+   original 200px was cut for, and the organization switcher needs room to show
+   a real organization name without truncating it. */
+:root {
+  --sidebar-width-expanded: 248px;
+}
+
+/* ==========================================================================
+   LANGUAGE SWITCH — segmented glass capsule (EN / FR), same family as the
+   theme switch: quiet by default, gold/navy active segment
+   ========================================================================== */
+
+.rg-lang-switch {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--rg-hairline-strong);
+  border-radius: 999px;
+  background: var(--rg-field);
+}
+
+.rg-lang-pill {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--rg-text-2);
+  font-family: var(--rg-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  padding: 0.4rem 0.65rem;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.rg-lang-pill:hover {
+  color: var(--rg-text);
+  background: var(--rg-tint);
+}
+
+.rg-lang-pill.active {
+  color: #f8f9fa;
+  background: linear-gradient(180deg, #1a2450, #0a1128);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+[data-bs-theme="dark"] .rg-lang-pill.active {
+  color: #0a1128;
+  background: linear-gradient(180deg, #fdba74, #fb923c);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.rg-lang-pill:focus-visible {
+  outline: 2px solid var(--rg-gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rg-lang-pill {
+    transition:
+      color 0.15s ease,
+      background 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+}
+
+/* ==========================================================================
+   COMMAND CENTER — admin tables as frosted ledgers, luminous filters,
+   and a properly seated language capsule
+   ========================================================================== */
+
+:root {
+  --rg-focus-glow: rgba(10, 17, 40, 0.16);
+  --rg-row-line: rgba(10, 17, 40, 0.06);
+  --rg-row-hover-edge: #0a1128;
+}
+
+[data-bs-theme="dark"] {
+  --rg-focus-glow: rgba(251, 146, 60, 0.3);
+  --rg-row-line: rgba(251, 146, 60, 0.08);
+  --rg-row-hover-edge: #fb923c;
+}
+
+/* language capsule: breathing room in the sidebar footer, inline on login */
+.sidebar-footer {
+  padding: 0.75rem 0.9rem 1rem;
+}
+
+.sidebar-footer .rg-lang-switch {
+  width: 100%;
+  justify-content: center;
+}
+
+.sidebar-footer .rg-lang-pill {
+  flex: 1 1 0;
+}
+
+.copyright-footer .rg-lang-switch {
+  margin-left: 0.6rem;
+  vertical-align: middle;
+}
+
+/* filters: a glowing 1px border when an admin engages a field */
+.form-control:focus,
+.form-select:focus,
+.flatpickr-input:focus,
+.admin-navbar .form-control-dark:focus {
+  border-color: var(--rg-field-focus-border);
+  box-shadow:
+    0 0 0 1px var(--rg-field-focus-border),
+    0 0 16px var(--rg-focus-glow);
+}
+
+/* the ledger: entire table as one frosted glass card */
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--rg-panel-strong);
+  border-radius: 1rem;
+  box-shadow:
+    0 0 0 1px var(--rg-glass-border),
+    var(--rg-shadow),
+    inset 0 1px 0 var(--rg-specular);
+  margin-bottom: 1.5rem;
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.85rem 1rem;
+  border-bottom: none;
+}
+
+.table thead th {
+  padding-top: 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--rg-hairline-strong);
+}
+
+/* rows part with whisper-thin light, not grid bars */
+.table tbody td,
+.table tbody th {
+  border-bottom: 1px solid var(--rg-row-line);
+}
+
+.table tbody tr:last-child td,
+.table tbody tr:last-child th {
+  border-bottom: none;
+}
+
+.table thead tr:first-child th:first-child {
+  border-top-left-radius: 1rem;
+}
+
+.table thead tr:first-child th:last-child {
+  border-top-right-radius: 1rem;
+}
+
+.table tbody tr:last-child td:first-child {
+  border-bottom-left-radius: 1rem;
+}
+
+.table tbody tr:last-child td:last-child {
+  border-bottom-right-radius: 1rem;
+}
+
+/* hover: a soft gradient sweep with a gold cue at the row's leading edge */
+.table tbody tr:hover td,
+.table tbody tr:hover th {
+  background-image: linear-gradient(
+    90deg,
+    var(--rg-tint-strong),
+    transparent 75%
+  );
+}
+
+.table tbody tr:hover td:first-child,
+.table tbody tr:hover th:first-child {
+  box-shadow: inset 3px 0 0 var(--rg-row-hover-edge);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .table tbody td,
+  .table tbody th {
+    transition:
+      background-color 0.15s ease,
+      box-shadow 0.15s ease;
+  }
+}
+
+/* Row hover: quiet frosted gray only — no sweep, no edge bar */
+.table {
+  --bs-table-striped-bg: rgba(10, 17, 40, 0.025);
+  --bs-table-hover-bg: rgba(10, 17, 40, 0.05);
+}
+
+[data-bs-theme="dark"] .table {
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.025);
+  --bs-table-hover-bg: rgba(255, 255, 255, 0.055);
+}
+
+.table tbody tr:hover td,
+.table tbody tr:hover th {
+  background-image: none;
+  background-color: rgba(10, 17, 40, 0.05);
+}
+
+[data-bs-theme="dark"] .table tbody tr:hover td,
+[data-bs-theme="dark"] .table tbody tr:hover th {
+  background-color: rgba(255, 255, 255, 0.055);
+}
+
+.table tbody tr:hover td:first-child,
+.table tbody tr:hover th:first-child {
+  box-shadow: none;
+}
+
+/* ==========================================================================
+   LOGIN — the invitation. Ambient aurora, one focused glass card,
+   clear hierarchy: mark → house → welcome → keys.
+   ========================================================================== */
+
+.container-signin {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ambient aurora behind the card */
+.container-signin::before,
+.container-signin::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container-signin::before {
+  width: 520px;
+  height: 520px;
+  top: -140px;
+  right: -120px;
+  background: radial-gradient(
+    circle,
+    rgba(251, 146, 60, 0.16),
+    transparent 65%
+  );
+}
+
+.container-signin::after {
+  width: 620px;
+  height: 620px;
+  bottom: -220px;
+  left: -180px;
+  background: radial-gradient(circle, rgba(10, 17, 40, 0.14), transparent 65%);
+}
+
+[data-bs-theme="dark"] .container-signin::after {
+  background: radial-gradient(circle, rgba(28, 37, 65, 0.55), transparent 65%);
+}
+
+.container-signin .form-signin {
+  position: relative;
+  z-index: 1;
+}
+
+.container-signin .copyright-footer {
+  z-index: 1;
+}
+
+/* the card itself: wider, airier, more deliberate */
+.form-signin {
+  max-width: 400px;
+  padding: 2.5rem 2.25rem 2rem;
+  border-radius: 1.5rem;
+}
+
+.form-signin .logo {
+  width: auto;
+  height: 40px;
+  margin: 0 auto 1.75rem;
+  display: block;
+}
+
+.login-eyebrow {
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rg-text-2);
+  margin-bottom: 0.4rem;
+}
+
+.form-signin h3 {
+  font-size: 1.9rem;
+  margin-bottom: 0.35rem;
+}
+
+.login-subtitle {
+  color: var(--rg-text-2);
+  font-size: 0.95rem;
+  margin-bottom: 1.75rem;
+}
+
+/* keys: taller fields, seamless submit */
+.form-signin .form-control {
+  padding: 0.8rem 1rem;
+  font-size: 15px;
+  border-radius: 0.8rem;
+}
+
+.form-signin .input-group .form-control {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.form-signin .input-group .btn {
+  border-top-right-radius: 0.8rem;
+  border-bottom-right-radius: 0.8rem;
+  padding-left: 1.1rem;
+  padding-right: 1.1rem;
+}
+
+.form-signin .margin-top-50 {
+  margin-top: 1.5rem;
+}
+
+.form-signin .btn-link {
+  font-size: 0.9rem;
+  text-decoration: none;
+}
+
+.form-signin .btn-link:hover {
+  text-decoration: underline;
+}
+
+.form-signin a {
+  font-size: 0.9rem;
+}
+
+/* Full-page loading: a lone, larger spinner — no caption */
+.loading-overlay .loader {
+  width: 28px;
+  height: 28px;
+  color: var(--rg-accent);
+}
+
+/* ==========================================================================
+   SCROLLBARS — soft pill thumbs on an invisible track, per theme
+   ========================================================================== */
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: rgba(10, 17, 40, 0.22);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  min-height: 40px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(10, 17, 40, 0.38);
+}
+
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb {
+  background-color: rgba(251, 146, 60, 0.28);
+}
+
+[data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(251, 146, 60, 0.45);
+}
+
+/* Firefox (no ::-webkit-scrollbar support): thin themed scrollbar */
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(10, 17, 40, 0.3) transparent;
+  }
+
+  html[data-bs-theme="dark"] {
+    scrollbar-color: rgba(251, 146, 60, 0.35) transparent;
+  }
+}
+
+/* ==========================================================================
+   LOGIN LOCKUP — CODYN Workspace badge + wordmark stack
+   ========================================================================== */
+
+.login-lockup {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9rem;
+  margin-bottom: 1.4rem;
+}
+
+.lockup-badge {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+}
+
+.lockup-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  line-height: 1.05;
+}
+
+.lockup-name {
+  font-family: var(--rg-sans);
+  font-weight: 800;
+  font-size: 1.75rem;
+  letter-spacing: 0.01em;
+  color: #10151f;
+}
+
+.lockup-sub {
+  font-family: var(--rg-sans);
+  font-weight: 650;
+  font-size: 1.05rem;
+  color: #3d4657;
+}
+
+[data-bs-theme="dark"] .lockup-name {
+  color: #f4f3f0;
+}
+
+[data-bs-theme="dark"] .lockup-sub {
+  color: #c9ced8;
+}
+
+/* Login CTA: one calm, full-width modern button */
+.form-signin .btn-login {
+  width: 100%;
+  margin-top: 0.4rem;
+  padding: 0.72rem 1rem;
+  font-size: 15px;
+  border-radius: 0.8rem;
+  background-image: none;
+  border: none;
+  box-shadow: 0 10px 24px -12px rgba(10, 17, 40, 0.5);
+}
+
+.form-signin .btn-login:hover,
+.form-signin .btn-login:active,
+.form-signin .btn-login:first-child:active {
+  background-image: none;
+  transform: none;
+  box-shadow: 0 12px 26px -12px rgba(10, 17, 40, 0.55);
+}
+
+[data-bs-theme="dark"] .form-signin .btn-login {
+  background-image: none;
+  box-shadow: 0 10px 26px -12px rgba(251, 146, 60, 0.45);
+}
+
+[data-bs-theme="dark"] .form-signin .btn-login:hover,
+[data-bs-theme="dark"] .form-signin .btn-login:active,
+[data-bs-theme="dark"] .form-signin .btn-login:first-child:active {
+  background-image: none;
+  transform: none;
+}
+
+/* ==========================================================================
+   ORGANIZATION SWITCHER — tenant selector at the top of the admin sidebar
+   ========================================================================== */
+
+.org-switcher {
+  margin: 0 10px 0.85rem;
+}
+
+.org-switcher .dropdown-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  text-decoration: none;
+  color: var(--rg-text);
+  background: var(--rg-field);
+  border: 1px solid var(--rg-hairline-strong);
+  border-radius: 0.8rem;
+}
+
+.org-switcher .dropdown-toggle:hover {
+  background: var(--rg-tint);
+  color: var(--rg-text);
+}
+
+.org-switcher .dropdown-toggle::after {
+  display: none; /* replaced by the chevron icon */
+}
+
+.org-switcher-label {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.org-switcher-eyebrow {
+  font-size: 0.6rem;
+  font-weight: 650;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rg-text-2);
+}
+
+.org-switcher-name {
+  font-weight: 600;
+  font-size: 0.92rem;
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-switcher-chevron {
+  flex: 0 0 auto;
+  color: var(--rg-text-2);
+}
+
+.org-switcher .dropdown-menu {
+  width: calc(var(--sidebar-width-expanded) - 20px);
+}
+
+/* collapsed sidebar (small viewports): show only the chevron */
+@media (max-width: 767.98px) {
+  .org-switcher {
+    margin: 0 4px 0.6rem;
+  }
+
+  .org-switcher-label {
+    display: none;
+  }
+
+  .org-switcher .dropdown-toggle {
+    justify-content: center;
+    padding: 0.5rem 0.25rem;
+  }
+}

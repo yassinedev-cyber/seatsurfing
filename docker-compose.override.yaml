@@ -1,0 +1,14 @@
+services:
+  node:
+    environment:
+      CRYPT_KEY: "local-dev-only-crypt-key-32bytes"
+      PUBLIC_SCHEME: "http"
+      PUBLIC_PORT: "8080"
+      # Platform operator bootstrap (first org = CODYN, its admin = super admin)
+      INIT_ORG_NAME: "CODYN Workspace"
+      INIT_ORG_USER: "admin"
+      INIT_ORG_PASS: "Sea!surf1ng"
+      INIT_ORG_DOMAIN: "localhost"
+      INIT_ORG_LANGUAGE: "en"
+      # Allow org admins to delete their organization (two-step, e-mail confirmed)
+      ALLOW_ORG_DELETE: "1"
