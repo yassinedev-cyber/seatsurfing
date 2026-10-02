@@ -9,6 +9,7 @@ import Organization from "@/types/Organization";
 import Ajax from "@/util/Ajax";
 import AjaxCredentials from "@/util/AjaxCredentials";
 import RuntimeConfig from "@/components/RuntimeConfig";
+import MyOrganization from "@/types/MyOrganization";
 import JwtDecoder from "@/util/JwtDecoder";
 import Loading from "@/components/Loading";
 import SeatsurfingAppLogo from "@/components/SeatsurfingAppLogo";
@@ -170,7 +171,36 @@ class Login extends React.Component<Props, State> {
     Ajax.PERSISTER.updateCredentialsLocalStorage(credentials);
     Ajax.PERSISTER.persistRefreshTokenInLocalStorage(data.refreshToken);
     await RuntimeConfig.loadUserAndSettings();
+    await this.switchToAdministeredOrganization();
     this.setState({ redirect: this.getRedirectUrl() });
+  };
+
+  /**
+   * A client's directory entry lives in the platform operator's organization as
+   * a plain user, so signing in at the operator's address authenticates them
+   * into a workspace they do not administer - they would land on the booking
+   * pages with no way out. When the identity administers another organization
+   * it belongs to, continue the session there instead.
+   *
+   * The switcher's own listing is the source of truth here, and it already
+   * leaves out the operator's organization for anybody but the operator, so
+   * every entry it returns is a workspace this identity genuinely holds.
+   */
+  switchToAdministeredOrganization = async (): Promise<void> => {
+    if (RuntimeConfig.hasAnyPermission()) {
+      return; // already signed in where they have rights
+    }
+    try {
+      const organizations = await MyOrganization.list();
+      const target = organizations.find((org) => !org.current);
+      if (!target) {
+        return; // a regular user of a client: booking pages are correct
+      }
+      await MyOrganization.switchTo(target.organizationId);
+      await RuntimeConfig.loadUserAndSettings();
+    } catch (e) {
+      // stay in the current organization rather than block the login
+    }
   };
 
   onPasswordSubmit = (e: any) => {
@@ -356,6 +386,10 @@ class Login extends React.Component<Props, State> {
     // only allow relative redirect URLs to prevent (open) redirects
     const redirectUrl = this.props.router.query["redir"] as string;
     if (!redirectUrl || !Validation.isRelativeUrl(redirectUrl)) {
+      // platform operators manage clients, they don't book desks
+      if (RuntimeConfig.isPlatformOperator()) {
+        return "/admin/overview";
+      }
       return Navigation.PATH_PAGE_SEARCH;
     }
 

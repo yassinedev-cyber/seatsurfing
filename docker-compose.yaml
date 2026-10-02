@@ -15,7 +15,10 @@ services:
     networks:
       sql:
     volumes:
-      - db:/var/lib/postgresql/data
+      # Postgres 18 keeps its data in a versioned subdirectory and expects the
+      # mount one level up. Mounting /var/lib/postgresql/data, as was right for
+      # 17, leaves the volume unused and the container refuses to start.
+      - db:/var/lib/postgresql
     environment:
       POSTGRES_PASSWORD: DB_PASSWORD
       POSTGRES_USER: seatsurfing

@@ -10,20 +10,17 @@ import JwtDecoder from "../util/JwtDecoder";
 export default class MyOrganization {
   organizationId: string;
   organizationName: string;
-  role: number;
   current: boolean;
 
   constructor() {
     this.organizationId = "";
     this.organizationName = "";
-    this.role = 0;
     this.current = false;
   }
 
   deserialize(input: any): void {
     this.organizationId = input.organizationId;
     this.organizationName = input.organizationName;
-    this.role = input.role;
     this.current = input.current;
   }
 
