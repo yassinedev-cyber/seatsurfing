@@ -37,6 +37,10 @@ interface RuntimeUserInfos {
   orgName: string;
   /** The signed-in user's resolved access, keyed by permission name. */
   permissions: PermissionMap;
+  /** The platform's own customer, who may open further workspaces. */
+  client: boolean;
+  /** The operator who runs the platform itself. */
+  platform: boolean;
   pluginMenuItems: any[];
   pluginWelcomeScreens: any[];
   bookingUIIntegrations: any[];
@@ -87,6 +91,26 @@ export default class RuntimeConfig {
    */
   static hasAnyPermission = (): boolean => {
     return Object.values(RuntimeConfig.INFOS.permissions).some((l) => l > 0);
+  };
+
+  /**
+   * Reports whether the user runs the platform: the client directory and the
+   * organizations opened for clients. Answered by the server as its own field
+   * rather than read out of the permission map, because the platform
+   * permission is deliberately absent from the catalogue the roles screen
+   * works from.
+   */
+  static isPlatformOperator = (): boolean => {
+    return RuntimeConfig.INFOS.platform;
+  };
+
+  /**
+   * Reports whether the user is the platform's own customer, as opposed to
+   * somebody who works inside a customer's organization. Only a customer may
+   * open another workspace.
+   */
+  static isPlatformClient = (): boolean => {
+    return RuntimeConfig.INFOS.client;
   };
 
   /**
@@ -200,6 +224,8 @@ export default class RuntimeConfig {
       organizationId: "",
       orgName: "",
       permissions: {},
+      client: false,
+      platform: false,
       pluginMenuItems: [],
       pluginWelcomeScreens: [],
       bookingUIIntegrations: [],
@@ -375,6 +401,8 @@ export default class RuntimeConfig {
     const user = await User.getSelf();
     RuntimeConfig.INFOS.organizationId = user.organizationId;
     RuntimeConfig.INFOS.permissions = user.permissions;
+    RuntimeConfig.INFOS.client = user.client;
+    RuntimeConfig.INFOS.platform = user.platform;
     RuntimeConfig.INFOS.idpLogin = !user.requirePassword;
     RuntimeConfig.INFOS.totpEnabled = user.totpEnabled;
     RuntimeConfig.INFOS.hasPasskeys = user.hasPasskeys;

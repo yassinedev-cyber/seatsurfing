@@ -217,17 +217,28 @@ export class UserSelf extends User {
   isPrimaryDomain: boolean;
   /** The signed-in user's resolved access, keyed by permission name. */
   permissions: PermissionMap;
+  /**
+   * True for the platform's own customer, as opposed to somebody who works
+   * inside a customer's organization. Only they may open another workspace.
+   */
+  client: boolean;
+  /** True for the operator who runs the platform itself. */
+  platform: boolean;
 
   constructor() {
     super();
     this.isPrimaryDomain = false;
     this.permissions = {};
+    this.client = false;
+    this.platform = false;
   }
 
   deserialize(input: any): void {
     super.deserialize(input);
     this.isPrimaryDomain = input.isPrimaryDomain ?? false;
     this.permissions = input.permissions ?? {};
+    this.client = input.client ?? false;
+    this.platform = input.platform ?? false;
   }
 }
 

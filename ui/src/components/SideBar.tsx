@@ -11,6 +11,7 @@ import {
   Clipboard as IconClipboard,
   Icon,
   Clock as IconApproval,
+  Box as IconBox,
   Shield as IconShield,
 } from "react-feather";
 import { Badge, Nav } from "react-bootstrap";
@@ -19,6 +20,7 @@ import withReadyRouter from "./withReadyRouter";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import RuntimeConfig from "./RuntimeConfig";
+import OrganizationSwitcher from "./OrganizationSwitcher";
 import { TranslationFunc, withTranslation } from "./withTranslation";
 import PremiumFeatureIcon from "./PremiumFeatureIcon";
 import LanguageSelector from "./LanguageSelector";
@@ -230,6 +232,30 @@ class SideBar extends React.Component<Props, State> {
             </Nav.Link>
           </li>
         )}
+        {/* A client may run several workspaces, each with its own people, areas
+            and bookings. This is where they open another one and move between
+            them. */}
+        {RuntimeConfig.hasPermission(
+          Permission.OrgSettings,
+          PermissionLevel.Admin,
+        ) && (
+          <li className="nav-item">
+            <Nav.Link
+              as={Link}
+              eventKey="/admin/organizations"
+              href="/admin/organizations"
+            >
+              <this.SidebarIcon
+                icon={IconBox}
+                title={this.props.t("organizations")}
+              />
+              <span className="d-none d-md-inline">
+                {" "}
+                {this.props.t("organizations")}
+              </span>
+            </Nav.Link>
+          </li>
+        )}
         {RuntimeConfig.hasPermission(
           Permission.OrgSettings,
           PermissionLevel.Admin,
@@ -279,6 +305,79 @@ class SideBar extends React.Component<Props, State> {
         })}
       </>
     );
+    // The platform operator runs the service, not a workspace. Desks, bookings
+    // and approvals all belong to a client's own console and are scoped to that
+    // client's organization, so the operator is given the platform's menu
+    // instead of a workspace's - not a workspace menu with items removed.
+    if (RuntimeConfig.isPlatformOperator()) {
+      return (
+        <Nav
+          id="sidebarMenu"
+          className="col-1 col-md-3 col-lg-2 d-md-block bg-light sidebar"
+          activeKey={this.getActiveKey()}
+        >
+          <div className="sidebar-sticky pt-3">
+            <OrganizationSwitcher />
+            <ul className="nav flex-column">
+              <li className="nav-item">
+                <Nav.Link
+                  as={Link}
+                  eventKey="/admin/overview"
+                  href="/admin/overview"
+                >
+                  <this.SidebarIcon
+                    icon={IconClipboard}
+                    title={this.props.t("operatorOverview")}
+                  />
+                  <span className="d-none d-md-inline">
+                    {" "}
+                    {this.props.t("operatorOverview")}
+                  </span>
+                </Nav.Link>
+              </li>
+              {/* Clients come first: the operator creates the customer, then
+                  attaches the organizations they own - either right away or
+                  later on. */}
+              <li className="nav-item">
+                <Nav.Link
+                  as={Link}
+                  eventKey="/admin/clients"
+                  href="/admin/clients"
+                >
+                  <this.SidebarIcon
+                    icon={IconUsers}
+                    title={this.props.t("clients")}
+                  />
+                  <span className="d-none d-md-inline">
+                    {" "}
+                    {this.props.t("clients")}
+                  </span>
+                </Nav.Link>
+              </li>
+              <li className="nav-item">
+                <Nav.Link
+                  as={Link}
+                  eventKey="/admin/organizations"
+                  href="/admin/organizations"
+                >
+                  <this.SidebarIcon
+                    icon={IconBox}
+                    title={this.props.t("organizations")}
+                  />
+                  <span className="d-none d-md-inline">
+                    {" "}
+                    {this.props.t("organizations")}
+                  </span>
+                </Nav.Link>
+              </li>
+            </ul>
+            <div className="sidebar-footer d-none d-md-block">
+              <LanguageSelector inNavbar={true} drop="up" />
+            </div>
+          </div>
+        </Nav>
+      );
+    }
     return (
       <Nav
         id="sidebarMenu"
@@ -286,6 +385,7 @@ class SideBar extends React.Component<Props, State> {
         activeKey={this.getActiveKey()}
       >
         <div className="sidebar-sticky pt-3">
+          <OrganizationSwitcher />
           <ul className="nav flex-column">
             <li className="nav-item">
               <Nav.Link
