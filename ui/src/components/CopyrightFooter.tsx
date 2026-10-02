@@ -1,5 +1,5 @@
 import React from "react";
-import ThemeSelector from "@/components/ThemeSelector";
+import ThemeSwitch from "@/components/ThemeSwitch";
 import LanguageSelector from "@/components/LanguageSelector";
 
 const CopyrightFooter: React.FC = () => {
@@ -14,7 +14,7 @@ const CopyrightFooter: React.FC = () => {
         Seatsurfing
       </a>
       <div className="footer-selectors">
-        <ThemeSelector compactBreakpoint="md" />
+        <ThemeSwitch />
         <LanguageSelector compactBreakpoint="md" />
       </div>
     </div>

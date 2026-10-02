@@ -18,7 +18,7 @@ import { TranslationFunc, withTranslation } from "./withTranslation";
 import User from "@/types/User";
 import Ajax from "@/util/Ajax";
 import LanguageSelector from "./LanguageSelector";
-import ThemeSelector from "./ThemeSelector";
+import ThemeSwitch from "./ThemeSwitch";
 import RendererUtils from "@/util/RendererUtils";
 
 interface State {
@@ -193,7 +193,7 @@ class NavBar extends React.Component<Props, State> {
               )}
             </span>
           </Nav.Link>
-          <ThemeSelector inNavbar={true} compactBreakpoint="lg" align="end" />
+          <ThemeSwitch />
           <LanguageSelector
             inNavbar={true}
             compactBreakpoint="lg"

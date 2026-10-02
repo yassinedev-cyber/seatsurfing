@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Sun as IconSun, Moon as IconMoon } from "react-feather";
+import { useTranslation } from "next-export-i18n";
 
 export default function ThemeSwitch() {
+  const { t } = useTranslation();
   const [theme, setTheme] = useState<"light" | "dark">("light");
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function ThemeSwitch() {
       className="rg-theme-switch"
       role="switch"
       aria-checked={theme === "dark"}
-      aria-label="Toggle dark mode"
+      aria-label={t("themeToggle")}
       onClick={toggle}
     >
       <IconSun className="feather rg-sun" />

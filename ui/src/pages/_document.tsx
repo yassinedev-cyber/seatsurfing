@@ -46,11 +46,30 @@ class Doc extends Document<Props> {
         <Head nonce={nonce}>
           <meta name="robots" content="noindex" />
           <meta httpEquiv="Content-Security-Policy" content={cspString} />
-          {/* Sets data-bs-theme before first paint to avoid a light/dark flash; admin pages manage theme separately */}
+          <link
+            rel="preload"
+            href="/ui/fonts/Inter-Var.woff2"
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+          <link
+            rel="preload"
+            href="/ui/fonts/PlayfairDisplay-Var.woff2"
+            as="font"
+            type="font/woff2"
+            crossOrigin="anonymous"
+          />
+          {/* Sets data-bs-theme before first paint to avoid a light/dark
+              flash. RoyalGlass is a dark-capable design for the whole
+              application, admin console included, so this deliberately does
+              not exempt /admin the way upstream's own theming does. With no
+              stored preference it follows the system. */}
           <script
             nonce={nonce}
             dangerouslySetInnerHTML={{
-              __html: `(function(){try{if(/\\/admin(\\/|$)/.test(window.location.pathname))return;var m=window.localStorage.getItem("theme")||"auto";var d=m==="dark"||(m==="auto"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.setAttribute("data-bs-theme",d?"dark":"light");}catch(e){}})();`,
+              __html:
+                '(function(){try{var m=window.matchMedia("(prefers-color-scheme: dark)");var a=function(){var s=null;try{s=localStorage.getItem("rg-theme");}catch(e){}document.documentElement.setAttribute("data-bs-theme",s==="dark"||s==="light"?s:m.matches?"dark":"light");};a();if(m.addEventListener){m.addEventListener("change",a);}}catch(e){}})();',
             }}
           />
         </Head>

@@ -13,6 +13,7 @@ import "@/styles/SideBar.css";
 import "@/styles/FullLayout.css";
 import "@/styles/Booking.css";
 import "@/styles/FloorPlanDesigner.css";
+import "@/styles/RoyalGlass.css";
 import type { AppProps } from "next/app";
 import RuntimeConfig from "@/components/RuntimeConfig";
 import React from "react";
@@ -27,12 +28,12 @@ import MfaEncouragementModal from "@/components/MfaEncouragementModal";
 import SessionExpiredModal from "@/components/SessionExpiredModal";
 import ForbiddenModal from "@/components/ForbiddenModal";
 import ServerErrorModal from "@/components/ServerErrorModal";
+import NavBar from "@/components/NavBar";
 import NotFoundModal from "@/components/NotFoundModal";
 import BadRequestModal from "@/components/BadRequestModal";
 import ConflictModal from "@/components/ConflictModal";
 import User from "@/types/User";
 import Router from "next/router";
-import Theme from "@/util/Theme";
 import FrameProtection from "@/util/FrameProtection";
 import FrameBlocked from "@/components/FrameBlocked";
 
@@ -112,8 +113,6 @@ class App extends React.Component<Props, State> {
     }, 10);
 
     Router.events.on("routeChangeComplete", this.onRouteChangeComplete);
-    Router.events.on("routeChangeStart", this.onThemeRouteChange);
-    Router.events.on("routeChangeComplete", this.onThemeRouteChange);
   }
 
   componentWillUnmount() {
@@ -124,13 +123,7 @@ class App extends React.Component<Props, State> {
     Ajax.onBadRequest = null;
     Ajax.onConflict = null;
     Router.events.off("routeChangeComplete", this.onRouteChangeComplete);
-    Router.events.off("routeChangeStart", this.onThemeRouteChange);
-    Router.events.off("routeChangeComplete", this.onThemeRouteChange);
   }
-
-  onThemeRouteChange = (url: string) => {
-    Theme.apply(url);
-  };
 
   onRouteChangeComplete = () => {
     if (
@@ -315,12 +308,26 @@ class App extends React.Component<Props, State> {
     const { Component, pageProps } = this.props;
     Formatting.Language = RuntimeConfig.getLanguage();
     Formatting.t = this.props.t;
+    // Booking UI pages share one persistent NavBar so it survives client-side
+    // navigation instead of remounting on every page.
+    const navBarRoutes = ["/search", "/bookings", "/buddies", "/preferences"];
+    const showNavBar = navBarRoutes.includes(this.props.router.pathname);
     return (
       <>
         <Head>
           <link rel="icon" href="/ui/favicon.ico" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <meta name="theme-color" content="#343a40" />
+          <meta
+            name="theme-color"
+            media="(prefers-color-scheme: light)"
+            content="#F8F9FA"
+          />
+          <meta
+            name="theme-color"
+            media="(prefers-color-scheme: dark)"
+            content="#0A1128"
+          />
+          <meta name="color-scheme" content="light dark" />
           <link rel="manifest" href="/ui/manifest.json" />
           <meta name="mobile-web-app-capable" content="yes" />
           <meta
