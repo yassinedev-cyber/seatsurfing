@@ -437,6 +437,23 @@ func (r *UserStore) Delete(e *User) error {
 		"user_id = $1", e.ID); err != nil {
 		return err
 	}
+	// A deleted account keeps no way back in: its sessions and refresh tokens
+	// go with it, rather than being left pointing at a user row that is about
+	// to disappear.
+	if err := GetRefreshTokenRepository().DeleteOfUser(e); err != nil {
+		return err
+	}
+	if err := GetSessionRepository().DeleteOfUser(e); err != nil {
+		return err
+	}
+	// The authentication log is a record of what happened, so it outlives the
+	// account - but it stops naming a person who no longer exists. The email
+	// already recorded on the row remains, as it does for an attempt by an
+	// address that never had an account.
+	if _, err := GetDatabase().DB().Exec("UPDATE auth_attempts SET user_id = NULL WHERE "+
+		"user_id = $1", e.ID); err != nil {
+		return err
+	}
 	_, err := GetDatabase().DB().Exec("DELETE FROM users WHERE id = $1", e.ID)
 	return err
 }
@@ -455,8 +472,13 @@ func (r *UserStore) DeleteAll(organizationID string) error {
 		"user_id IN (SELECT id FROM users WHERE organization_id = $1)", organizationID); err != nil {
 		return err
 	}
-	// Also delete refresh tokens
+	// Also delete refresh tokens and the sessions they belong to, so that no
+	// way into the organization outlives the organization itself.
 	if _, err := GetDatabase().DB().Exec("DELETE FROM refresh_tokens WHERE "+
+		"user_id IN (SELECT id FROM users WHERE organization_id = $1)", organizationID); err != nil {
+		return err
+	}
+	if _, err := GetDatabase().DB().Exec("DELETE FROM sessions WHERE "+
 		"user_id IN (SELECT id FROM users WHERE organization_id = $1)", organizationID); err != nil {
 		return err
 	}

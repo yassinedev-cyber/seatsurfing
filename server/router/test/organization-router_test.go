@@ -49,15 +49,16 @@ func TestOrganizationsForbidden(t *testing.T) {
 	loginResponse := CreateLoginTestUser()
 	org := CreateTestOrg("testing.com")
 
-	// Listing and creating organizations were super admin only and have been
-	// removed along with that role.
+	// Listing and creating organizations belong to the platform operator. They
+	// answer a client with the organizations they run, and refuse anybody who
+	// administers none.
 	req := NewHTTPRequest("GET", "/organization/", loginResponse.UserID, nil)
 	res := ExecuteTestRequest(req)
-	CheckTestResponseCode(t, http.StatusNotFound, res.Code)
+	CheckTestResponseCode(t, http.StatusForbidden, res.Code)
 
 	req = NewHTTPRequest("POST", "/organization/", loginResponse.UserID, nil)
 	res = ExecuteTestRequest(req)
-	CheckTestResponseCode(t, http.StatusNotFound, res.Code)
+	CheckTestResponseCode(t, http.StatusForbidden, res.Code)
 
 	req = NewHTTPRequest("DELETE", "/organization/"+org.ID, loginResponse.UserID, nil)
 	res = ExecuteTestRequest(req)

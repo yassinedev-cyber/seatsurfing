@@ -245,6 +245,21 @@ func applyLegacyRole(user *User, role UserRole) *User {
 	return user
 }
 
+// CreateTestUserPlatformOperator creates the platform operator in a fresh
+// organization of their own, which that account makes the platform
+// organization: it holds the operator and the client directory, and is never a
+// workspace. The operator administers it and, separately, holds the role that
+// grants the platform permission.
+func CreateTestUserPlatformOperator() *User {
+	org := CreateTestOrg("operator.test")
+	user := CreateTestUserDomain(org, "operator.test", UserRoleOrgAdmin)
+	platformRoleID := GetRoleRepository().EnsurePlatformOperatorRole(org.ID)
+	if err := GetUserRoleRepository().Add(user.ID, platformRoleID, RoleAssignmentSourceManual); err != nil {
+		panic(err)
+	}
+	return user
+}
+
 func CreateTestUserOrgAdminDomain(org *Organization, domain string) *User {
 	return CreateTestUserDomain(org, domain, UserRoleOrgAdmin)
 }

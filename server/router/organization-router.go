@@ -683,7 +683,9 @@ func (router *OrganizationRouter) getAll(w http.ResponseWriter, r *http.Request)
 // email. The counts alongside each one are that client's own figures - they are
 // read per organization and never span a tenant boundary.
 func (router *OrganizationRouter) getOwnOrganizations(w http.ResponseWriter, user *User) {
-	if user == nil {
+	// Somebody who administers nothing has no organizations to be shown, and
+	// an empty list would read as an answer rather than a refusal.
+	if user == nil || !HasPermission(user, user.OrganizationID, PermissionOrgSettings, PermissionLevelAdmin) {
 		SendForbidden(w)
 		return
 	}

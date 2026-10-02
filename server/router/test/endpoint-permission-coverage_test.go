@@ -60,6 +60,12 @@ var baselineRoutes = map[string]string{
 	// The permission catalogue describes the model, not the caller's access.
 	"GET /role/permissions": "permission catalogue",
 
+	// Which organizations this identity belongs to is a fact about the caller,
+	// like their own profile. It is keyed on their email address and answers
+	// with nothing from inside any organization but its name. An ordinary user
+	// belongs to one and sees one.
+	"GET /user/organizations": "own organization memberships",
+
 	// CORS preflight, answered by the security header middleware.
 	"OPTIONS /": "CORS preflight",
 }
