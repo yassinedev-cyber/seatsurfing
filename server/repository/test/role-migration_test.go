@@ -220,3 +220,46 @@ func TestMigrationIsIdempotent(t *testing.T) {
 	assigned, _ := GetUserRoleRepository().GetRoleIDsForUser(admin.ID)
 	CheckTestInt(t, 1, len(assigned))
 }
+
+// A platform operator must come out of the upgrade still running the platform.
+// Upstream converts a legacy super admin into an administrator of their own
+// organization, which is not the same thing: without the platform role the
+// operator loses the client directory and the organization listing.
+func TestMigrationKeepsPlatformOperator(t *testing.T) {
+	ClearTestDB()
+	restoreLegacyRoleColumn(t)
+	platformOrg := CreateTestOrg("operator-migration.com")
+	operator := createLegacyUser(t, platformOrg, UserRoleSuperAdmin)
+
+	// A client organization with an ordinary administrator of its own.
+	clientOrg := CreateTestOrg("client-migration.com")
+	clientAdmin := createLegacyUser(t, clientOrg, UserRoleOrgAdmin)
+
+	runLegacyRoleMigration(t)
+
+	perms, err := GetUserRoleRepository().GetEffectivePermissions(operator.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perms[PermissionPlatform] < PermissionLevelAdmin {
+		t.Fatal("The platform operator lost the platform in the upgrade")
+	}
+	if !GetUserRepository().IsPlatformOrganization(platformOrg.ID) {
+		t.Fatal("The operator's organization is no longer recognised as the platform organization")
+	}
+
+	// The client's administrator keeps their organization and gains nothing.
+	clientPerms, err := GetUserRoleRepository().GetEffectivePermissions(clientAdmin.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if clientPerms[PermissionOrgSettings] < PermissionLevelAdmin {
+		t.Fatal("The client's administrator lost their own organization in the upgrade")
+	}
+	if clientPerms[PermissionPlatform] >= PermissionLevelAdmin {
+		t.Fatal("A client's administrator was given the platform by the upgrade")
+	}
+	if GetUserRepository().IsPlatformOrganization(clientOrg.ID) {
+		t.Fatal("A client organization was mistaken for the platform organization")
+	}
+}

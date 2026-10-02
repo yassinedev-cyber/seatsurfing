@@ -149,6 +149,15 @@ func (r *RoleStore) migrateLegacyRoles() {
 
 		// Former super admins become administrators of their own organization.
 		r.assignUsersWithLegacyRole(orgID, int(UserRoleSuperAdmin), orgAdminRoleID, "super admin")
+		// They also ran the platform, and administering one organization does
+		// not carry that. Without this the operator comes out of the upgrade
+		// unable to reach their own client directory. The role is seeded only
+		// where such a user exists, so that it never appears in a client
+		// organization for somebody to hand out.
+		if r.organizationHasLegacyRole(orgID, int(UserRoleSuperAdmin)) {
+			r.assignUsersWithLegacyRole(orgID, int(UserRoleSuperAdmin),
+				r.EnsurePlatformOperatorRole(orgID), "platform operator")
+		}
 		r.assignUsersWithLegacyRole(orgID, int(UserRoleOrgAdmin), orgAdminRoleID, "org admin")
 		r.assignUsersWithLegacyRole(orgID, int(UserRoleSpaceAdmin), floorPlanRoleID, "space admin")
 		r.assignUsersWithLegacyRole(orgID, int(UserRoleServiceAccountRO), apiRoleID, "service account (read-only)")
@@ -194,6 +203,16 @@ func (r *RoleStore) seedRole(orgID, name, description string, system bool, perms
 		panic(err)
 	}
 	return e.ID
+}
+
+// organizationHasLegacyRole reports whether the organization contains a user
+// with the given legacy users.role value. Only called while that column still
+// exists, during the upgrade that replaces it.
+func (r *RoleStore) organizationHasLegacyRole(orgID string, legacyRole int) bool {
+	var num int
+	err := GetDatabase().DB().QueryRow("SELECT COUNT(*) FROM users "+
+		"WHERE organization_id = $1 AND role = $2", orgID, legacyRole).Scan(&num)
+	return err == nil && num > 0
 }
 
 func (r *RoleStore) assignUsersWithLegacyRole(orgID string, legacyRole int, roleID, label string) {
