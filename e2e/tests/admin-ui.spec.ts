@@ -1,5 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { login } from "../util/helper";
+import { loginAsNewClient } from "../util/helper";
+
+let clientEmail: string;
 
 test.beforeEach(async ({ page }) => {
   // Suppress the MFA encouragement modal
@@ -7,11 +9,13 @@ test.beforeEach(async ({ page }) => {
     window.localStorage.setItem("mfaEncouragementDismissed", "1");
   });
 
-  // Enter credentials and log in
-  await login(page, "admin@seatsurfing.local", "Sea!surf1ng");
+  // The bootstrap account runs the platform and has no workspace of its own,
+  // so these tests get a client of the platform: the equivalent of the
+  // organization administrator upstream signs in as.
+  clientEmail = await loginAsNewClient(page);
 
   // Ensure we've reached the dashboard
-  await expect(page).toHaveURL(/search\/$/);
+  await expect(page).toHaveURL(/\/search\//);
   await expect(page.getByText("Loading …")).not.toBeVisible();
 
   // Navigate to "Administration"
@@ -81,13 +85,13 @@ test("auth events", async ({ page }) => {
   // The login from beforeEach must show up as a successful event
   const table = page.locator("#datatable");
   await expect(
-    table.getByRole("cell", { name: "admin@seatsurfing.local" }).first(),
+    table.getByRole("cell", { name: clientEmail }).first(),
   ).toBeVisible();
   await expect(table.getByText("Successful").first()).toBeVisible();
 
   // Open the details modal
   await table
-    .getByRole("cell", { name: "admin@seatsurfing.local" })
+    .getByRole("cell", { name: clientEmail })
     .first()
     .click();
   await expect(page.getByRole("dialog").getByText("Outcome")).toBeVisible();

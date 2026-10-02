@@ -644,6 +644,12 @@ func (router *OrganizationRouter) create(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	GetRoleRepository().EnsureBuiltInRoles(e.ID)
+	// A workspace with no floor cannot be booked in at all, so a new one opens
+	// with the same sample area a fresh installation gets. The platform
+	// organization is the exception: nobody books a desk there.
+	if err := GetOrganizationRepository().CreateSampleData(e); err != nil {
+		log.Println(err)
+	}
 	SendCreated(w, e.ID)
 }
 
@@ -812,6 +818,11 @@ func (router *OrganizationRouter) createMyOrganization(w http.ResponseWriter, r 
 		log.Println(err)
 		SendInternalServerError(w)
 		return
+	}
+	// As above: the workspace opens with a sample area so it can be used at
+	// once. A failure here is not worth losing the workspace over.
+	if err := GetOrganizationRepository().CreateSampleData(e); err != nil {
+		log.Println(err)
 	}
 	SendCreated(w, e.ID)
 }

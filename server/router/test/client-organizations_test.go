@@ -152,7 +152,9 @@ func TestClientOrganizationsHoldSeparateData(t *testing.T) {
 		t.Fatalf("Expected the new organization to hold only its administrator, got %d users", len(users))
 	}
 
-	// Neither are its areas.
+	// Neither are its areas. A new workspace opens with a sample area of its
+	// own, so what matters is not that it is empty but that nothing in it came
+	// from the first organization.
 	req = NewHTTPRequest("GET", "/location/", secondLogin.UserID, nil)
 	res = ExecuteTestRequest(req)
 	CheckTestResponseCode(t, http.StatusOK, res.Code)
@@ -160,8 +162,10 @@ func TestClientOrganizationsHoldSeparateData(t *testing.T) {
 		ID string `json:"id"`
 	}
 	json.Unmarshal(res.Body.Bytes(), &locations)
-	if len(locations) != 0 {
-		t.Fatalf("Expected a new organization to start with no areas, got %d", len(locations))
+	for _, l := range locations {
+		if l.ID == location.ID {
+			t.Fatal("The first organization's area is listed in the second")
+		}
 	}
 
 	// And the first organization's area cannot be reached from the second.

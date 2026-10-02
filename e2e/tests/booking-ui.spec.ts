@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { login, cancelAllBookings } from "../util/helper";
+import { loginAsNewClient, cancelAllBookings } from "../util/helper";
 
 test.beforeEach(async ({ page }) => {
   // Suppress the MFA encouragement modal
@@ -7,11 +7,13 @@ test.beforeEach(async ({ page }) => {
     window.localStorage.setItem("mfaEncouragementDismissed", "1");
   });
 
-  // Enter credentials and log in
-  await login(page, "admin@seatsurfing.local", "Sea!surf1ng");
+  // The bootstrap account runs the platform and has no workspace of its own,
+  // so these tests get a client of the platform: the equivalent of the
+  // organization administrator upstream signs in as.
+  await loginAsNewClient(page);
 
   // Ensure we've reached the dashboard
-  await expect(page).toHaveURL(/search\/$/);
+  await expect(page).toHaveURL(/\/search\//);
 
   // Start with a clean slate: a previous failed/retried run (or another
   // browser project sharing the same backend) may have left Desk 1 booked,
@@ -42,5 +44,5 @@ test("crud booking", async ({ page }) => {
   await page.getByRole("button", { name: "Cancel booking" }).click();
   await expect(page.getByText("No bookings.")).toBeVisible();
   await page.getByRole("link", { name: "Book a space" }).click();
-  await expect(page).toHaveURL(/search\/$/);
+  await expect(page).toHaveURL(/\/search\//);
 });
