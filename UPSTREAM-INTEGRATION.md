@@ -6,8 +6,9 @@ each change looks like in use.
 Branch: `codyn-v2`, started from `upstream/main` (1.132.1).
 Previous state preserved on `ByORG`, tagged `codyn-pre-upstream-merge`.
 
-**Status: the backend is done and its full test suite passes. The frontend port is
-not finished** — see [Not done yet](#not-done-yet). Don't ship this branch yet.
+**Status: complete and green.** Backend, frontend and tests are ported; the app
+builds and runs. Go suite (8 packages), UI unit tests (172) and the end-to-end
+suite (7 specs, against a running instance) all pass.
 
 ---
 
@@ -287,7 +288,7 @@ login pages.
 
 ---
 
-## 6. Two upstream bugs fixed along the way
+## 6. Upstream bugs fixed along the way
 
 Both were caught by the fork's own isolation tests, and both are genuine defects
 by any reading — rows left pointing at a user or organization about to vanish.
@@ -298,6 +299,18 @@ by any reading — rows left pointing at a user or organization about to vanish.
 | `UserStore.DeleteAll` | sessions survived the organization | deleted with it |
 
 A deleted account now keeps no way back in.
+
+Two more, outside the deletion paths:
+
+| Where | Was | Now |
+| --- | --- | --- |
+| `docker-compose.yaml` | moved to Postgres 18 but kept the 17 volume path, so the database would not start | mounted where 18 expects it |
+| `BrowserUtil.test.ts` | asserted `de` and `zh-TW` are supported languages | says `en-GB` and `fr`, which is what this fork ships |
+
+`clean-db.sh` was also stale: it knew none of the five tables upstream added, so
+a wipe left a deleted tenant's roles behind and stripped the operator of theirs.
+It now refuses to run at all when it meets a table it does not handle, so the
+next upgrade reports that it is stale instead of quietly leaving data behind.
 
 ---
 
@@ -312,27 +325,48 @@ A deleted account now keeps no way back in.
 
 ---
 
-## 8. Not done yet
+## 8. The frontend
 
-The frontend still has to be ported. It reads
-`RuntimeConfig.INFOS.superAdmin` / `orgAdmin` / `spaceAdmin` in ~32 places; those
-flags no longer exist and must become permission checks against the new
-`permissions` map.
+`RuntimeConfig` gains `client` and `platform` from the server, with
+`isPlatformOperator()` and `isPlatformClient()` beside upstream's permission
+helpers. The platform flag is read from its own field rather than the permission
+map, because the permission is deliberately outside the catalogue.
 
-Outstanding:
+The operator gets the platform's own menu — Overview, Clients, Organizations —
+rather than a workspace menu with the desks removed, since bookings and areas
+belong to a client's console and are scoped to that client's organization. A
+client keeps the workspace menu plus their own organization list and switcher.
 
-1. `RuntimeConfig`, `SideBar`, `NavBar`, login, dashboard — onto `permissions`.
-2. Re-apply the CODYN pages: `admin/clients/*`, `admin/overview.tsx`,
-   `admin/organizations/*`, `OrganizationSwitcher`.
-3. Restyle upstream's new screens (roles, audit, user calendar, public booking)
-   to RoyalGlass, since they ship with upstream's look.
-4. `User.ts` needs the `client` field back — upstream rewrote that file when it
-   removed Confluence.
-5. Rebuild and run: `docker compose up -d --build`.
+**Theme.** RoyalGlass is the theme of record. Upstream's own theming was removed
+rather than kept alongside: both wrote `data-bs-theme`, but upstream's strips it
+on `/admin`, holding the admin console to light — RoyalGlass is dark-capable
+across the whole application, so the two could not both be right. Its three-way
+selector gives way to the RoyalGlass switch; with no stored preference the
+pre-paint script still follows the system, so automatic behaviour is kept.
+
+Because RoyalGlass styles Bootstrap globally, **upstream's new screens — roles,
+audit log, user calendar, public booking — pick up the design without being
+touched individually.**
+
+One regression worth recording: upstream deleted the `organizations` translation
+key along with its own organization listing. This fork still has a listing, so
+the sidebar and three pages rendered the bare key until it was restored. Three
+further keys that upstream references from its own screens but ships in no
+language file were filled in at the same time.
 
 ---
 
-## 9. Verifying the backend today
+## 9. New client workspaces get a sample area
+
+A workspace created for a client had no areas at all, so the client signed in to
+an empty booking page and could do nothing until they had drawn a floor plan. A
+new installation has never started that way — upstream gives its bootstrap
+organization the sample floor — so both creation paths now do the same. The
+platform organization is still left without one: nobody books a desk there.
+
+---
+
+## 10. Verifying it
 
 Go is not installed on this machine, so both scripts run in containers:
 
@@ -342,8 +376,20 @@ Go is not installed on this machine, so both scripts run in containers:
 ./gotest.sh -run 'TestPlatform|TestClient' ./router/test/     # CODYN behaviour only
 ```
 
-Current state: **8 packages pass**, including 22 CODYN behaviour tests and the
-migration test above.
+The UI and the end-to-end suite:
+
+```bash
+cd ui && npx vitest run                      # 172 unit tests
+docker compose up -d --build                 # the app on :8080
+cd e2e && UI_URL=http://localhost:8080 npx playwright test --project=chromium
+```
+
+Current state: **8 Go packages, 172 UI tests and 7 e2e specs pass**, including 22
+CODYN behaviour tests and the migration test above.
+
+The e2e suite signs in as a freshly provisioned *client*, not as the bootstrap
+account: in this fork that account runs the platform and has no workspace, so a
+client is the equivalent of the organization administrator upstream used.
 
 The tests worth reading first, because they are the specification of this fork's
 behaviour:
