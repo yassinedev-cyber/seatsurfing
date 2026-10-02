@@ -631,6 +631,19 @@ func (r *BookingStore) GetCountAll() (int, error) {
 
 // GetCountsSummary returns the booking counts needed by the stats summary in a
 // single pass over the organization's bookings, instead of one query each.
+// GetCount totals the bookings held by one organization. It backs the figures
+// the platform operator sees beside each client organization.
+func (r *BookingStore) GetCount(organizationID string) (int, error) {
+	var res int
+	err := GetDatabase().DB().QueryRow("SELECT COUNT(bookings.id) "+
+		"FROM bookings "+
+		"INNER JOIN spaces ON spaces.id = bookings.space_id "+
+		"INNER JOIN locations ON locations.id = spaces.location_id "+
+		"WHERE locations.organization_id = $1",
+		organizationID).Scan(&res)
+	return res, err
+}
+
 func (r *BookingStore) GetCountsSummary(organizationID string, today, yesterday, thisWeek DateRange) (BookingCounts, error) {
 	var res BookingCounts
 	err := GetDatabase().DB().QueryRow("SELECT COUNT(bookings.id), "+

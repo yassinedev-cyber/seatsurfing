@@ -62,6 +62,22 @@ func HasAnyPermission(user *User, organizationID string) bool {
 	return service.HasAnyPermission(user, organizationID)
 }
 
+// ─── Platform operator ───────────────────────────────────────────────────────
+
+// CanManagePlatform reports whether the user runs the platform itself.
+// See service.CanManagePlatform.
+func CanManagePlatform(user *User) bool {
+	return service.CanManagePlatform(user)
+}
+
+// IsPlatformClient reports whether the user is one of the platform's own
+// customers. See service.IsPlatformClient.
+func IsPlatformClient(user *User) bool {
+	return service.IsPlatformClient(user)
+}
+
+// ─── Handler guards ──────────────────────────────────────────────────────────
+
 // CheckPermission is the handler-level guard: it writes 403 and reports false
 // when the request user lacks the required level.
 func CheckPermission(w http.ResponseWriter, user *User, organizationID string, p Permission, min PermissionLevel) bool {

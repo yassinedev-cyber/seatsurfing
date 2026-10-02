@@ -9,6 +9,7 @@ import (
 	"image/png"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -87,6 +88,13 @@ type GetUserResponse struct {
 
 type GetUserSelfResponse struct {
 	IsPrimaryDomain bool `json:"isPrimaryDomain"`
+	// Client marks the platform's own customer, as opposed to somebody who
+	// works inside a customer's organization. Only they may open another
+	// workspace, so only they are offered the button. Answered for the
+	// signed-in user alone - it costs a lookup, and a listing does not need it.
+	Client bool `json:"client"`
+	// Platform marks the operator who runs the service itself.
+	Platform bool `json:"platform"`
 	// Permissions is the caller's own resolved access, keyed by permission
 	// name. It is returned only for the authenticated user themselves, since
 	// resolving it for every entry of a user list would cost a query each.
@@ -99,6 +107,35 @@ type GetUserInfoSmall struct {
 	Email     string `json:"email"`
 	Firstname string `json:"firstname"`
 	Lastname  string `json:"lastname"`
+}
+
+// GetMyOrganizationResponse is one entry of the organization switcher.
+type GetMyOrganizationResponse struct {
+	OrganizationID   string `json:"organizationId"`
+	OrganizationName string `json:"organizationName"`
+	Current          bool   `json:"current"`
+}
+
+// A client is a customer of the platform. Their record lives in the operator's
+// organization and acts as a directory entry; the workspaces they bought are
+// separate organizations holding a copy of the same identity as an
+// administrator.
+type GetClientOrganizationResponse struct {
+	OrganizationID   string `json:"organizationId"`
+	OrganizationName string `json:"organizationName"`
+	UserID           string `json:"userId"`
+}
+
+type GetClientResponse struct {
+	ID            string                           `json:"id"`
+	Email         string                           `json:"email"`
+	Firstname     string                           `json:"firstname"`
+	Lastname      string                           `json:"lastname"`
+	Organizations []*GetClientOrganizationResponse `json:"organizations"`
+}
+
+type AttachClientRequest struct {
+	OrganizationID string `json:"organizationId" validate:"required,uuid4"`
 }
 
 type GetUserCountResponse struct {
@@ -147,7 +184,12 @@ func (router *UserRouter) SetupRoutes(s *mux.Router) {
 	s.HandleFunc("/{id}/permissions", router.getPermissions).Methods("GET")
 	s.HandleFunc("/count", router.getCount).Methods("GET")
 	s.HandleFunc("/session", router.getActiveSessions).Methods("GET")
+	s.HandleFunc("/organizations", router.getMyOrganizations).Methods("GET")
+	s.HandleFunc("/organizations/{id}/switch", router.switchOrganization).Methods("POST")
+	s.HandleFunc("/clients", router.getClients).Methods("GET")
 	s.HandleFunc("/me", router.getSelf).Methods("GET")
+	s.HandleFunc("/{id}/organizations", router.attachClient).Methods("POST")
+	s.HandleFunc("/{id}/organizations/{organizationId}", router.detachClient).Methods("DELETE")
 	s.HandleFunc("/{id}", router.getOne).Methods("GET")
 	s.HandleFunc("/byEmail/{email}", router.getOneByEmail).Methods("GET")
 	s.HandleFunc("/{id}/password", router.setPassword).Methods("PUT")
@@ -450,6 +492,228 @@ func (router *UserRouter) getActiveSessions(w http.ResponseWriter, r *http.Reque
 	SendJSON(w, res)
 }
 
+// getMyOrganizations lists every organization the signed-in identity belongs
+// to. Membership is keyed on the email address: a client who owns several
+// organizations holds one user record per organization, all sharing an email.
+func (router *UserRouter) getMyOrganizations(w http.ResponseWriter, r *http.Request) {
+	user := GetRequestUser(r)
+	if user == nil {
+		SendNotFound(w)
+		return
+	}
+	users, err := GetUserRepository().GetUsersWithEmail(user.Email)
+	if err != nil {
+		log.Println(err)
+		SendInternalServerError(w)
+		return
+	}
+	res := []*GetMyOrganizationResponse{}
+	for _, u := range users {
+		if u.Disabled {
+			continue
+		}
+		// A client's directory entry lives in the operator's organization, but
+		// that is bookkeeping, not a workspace they own - it must never appear
+		// among the organizations they can switch between. The operator's own
+		// account is the exception: that organization is where they work.
+		if !CanManagePlatform(u) && GetUserRepository().IsPlatformOrganization(u.OrganizationID) {
+			continue
+		}
+		org, err := GetOrganizationRepository().GetOne(u.OrganizationID)
+		if err != nil || org == nil {
+			continue
+		}
+		res = append(res, &GetMyOrganizationResponse{
+			OrganizationID:   org.ID,
+			OrganizationName: org.Name,
+			Current:          u.OrganizationID == user.OrganizationID,
+		})
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return strings.ToLower(res[i].OrganizationName) < strings.ToLower(res[j].OrganizationName)
+	})
+	SendJSON(w, res)
+}
+
+// switchOrganization issues a fresh session for the same identity in another
+// organization it belongs to, so an owner of several organizations does not
+// have to sign in again for each one.
+func (router *UserRouter) switchOrganization(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	user := GetRequestUser(r)
+	if user == nil {
+		SendNotFound(w)
+		return
+	}
+	targetOrgID := vars["id"]
+	if targetOrgID == user.OrganizationID {
+		SendBadRequest(w)
+		return
+	}
+	target, err := GetUserRepository().GetByEmail(targetOrgID, user.Email)
+	if err != nil || target == nil {
+		SendForbidden(w)
+		return
+	}
+	if target.Disabled {
+		SendForbidden(w)
+		return
+	}
+	// The operator's organization is not a workspace, so a client can never
+	// switch into it on the strength of their directory entry there.
+	if !CanManagePlatform(target) && GetUserRepository().IsPlatformOrganization(targetOrgID) {
+		SendForbidden(w)
+		return
+	}
+	// PasswordUpdateRequired is deliberately not checked here: it forces
+	// rotation of an operator-set password on the login path, and switching
+	// derives a session from an identity that has already authenticated.
+	(&AuthRouter{}).createAndSendJWT(w, r, target, "organization switch", "", "", "")
+}
+
+// getClients lists the platform's customers together with the organizations
+// each of them owns. The customer directory is the operator's own organization.
+func (router *UserRouter) getClients(w http.ResponseWriter, r *http.Request) {
+	user := GetRequestUser(r)
+	if !CanManagePlatform(user) {
+		SendForbidden(w)
+		return
+	}
+	list, err := GetUserRepository().GetAll(user.OrganizationID, 1000, 0)
+	if err != nil {
+		log.Println(err)
+		SendInternalServerError(w)
+		return
+	}
+	res := []*GetClientResponse{}
+	for _, e := range list {
+		if CanManagePlatform(e) {
+			continue // the operator's own staff, not a customer
+		}
+		m := &GetClientResponse{
+			ID:            e.ID,
+			Email:         e.Email,
+			Firstname:     e.Firstname,
+			Lastname:      e.Lastname,
+			Organizations: []*GetClientOrganizationResponse{},
+		}
+		accounts, err := GetUserRepository().GetUsersWithEmail(e.Email)
+		if err != nil {
+			log.Println(err)
+			SendInternalServerError(w)
+			return
+		}
+		for _, a := range accounts {
+			if a.OrganizationID == user.OrganizationID {
+				continue // the directory entry itself, not a purchased workspace
+			}
+			org, err := GetOrganizationRepository().GetOne(a.OrganizationID)
+			if err != nil || org == nil {
+				continue
+			}
+			m.Organizations = append(m.Organizations, &GetClientOrganizationResponse{
+				OrganizationID:   org.ID,
+				OrganizationName: org.Name,
+				UserID:           a.ID,
+			})
+		}
+		sort.Slice(m.Organizations, func(i, j int) bool {
+			return strings.ToLower(m.Organizations[i].OrganizationName) < strings.ToLower(m.Organizations[j].OrganizationName)
+		})
+		res = append(res, m)
+	}
+	sort.Slice(res, func(i, j int) bool {
+		return strings.ToLower(res[i].Email) < strings.ToLower(res[j].Email)
+	})
+	SendJSON(w, res)
+}
+
+// attachClient gives a client an admin account in one of their organizations.
+// The credential is copied from the directory entry so a client who owns
+// several organizations signs in once and switches between them.
+func (router *UserRouter) attachClient(w http.ResponseWriter, r *http.Request) {
+	user := GetRequestUser(r)
+	if !CanManagePlatform(user) {
+		SendForbidden(w)
+		return
+	}
+	var m AttachClientRequest
+	if UnmarshalValidateBody(r, &m) != nil {
+		SendBadRequest(w)
+		return
+	}
+	vars := mux.Vars(r)
+	client, err := GetUserRepository().GetOne(vars["id"])
+	if err != nil || client.OrganizationID != user.OrganizationID {
+		SendNotFound(w)
+		return
+	}
+	if m.OrganizationID == user.OrganizationID {
+		SendBadRequest(w) // the operator's own organization is not for sale
+		return
+	}
+	org, err := GetOrganizationRepository().GetOne(m.OrganizationID)
+	if err != nil || org == nil {
+		SendNotFound(w)
+		return
+	}
+	if existing, err := GetUserRepository().GetByEmail(org.ID, client.Email); err == nil && existing != nil {
+		SendAlreadyExistsCode(w, ResponseCodeUserAlreadyExists)
+		return
+	}
+	e := &User{
+		OrganizationID:         org.ID,
+		Email:                  client.Email,
+		Firstname:              client.Firstname,
+		Lastname:               client.Lastname,
+		HashedPassword:         client.HashedPassword,
+		PasswordPending:        client.PasswordPending,
+		PasswordUpdateRequired: client.PasswordUpdateRequired,
+	}
+	if err := GetUserRepository().Create(e); err != nil {
+		log.Println(err)
+		SendInternalServerError(w)
+		return
+	}
+	// The client runs the workspace, so they hold its administrator role. The
+	// built-in roles are seeded here because an organization created before
+	// this point may not have them yet.
+	orgAdminRoleID, _, _ := GetRoleRepository().EnsureBuiltInRoles(org.ID)
+	if err := GetUserRoleRepository().Add(e.ID, orgAdminRoleID, RoleAssignmentSourceManual); err != nil {
+		log.Println(err)
+		SendInternalServerError(w)
+		return
+	}
+	SendCreated(w, e.ID)
+}
+
+// detachClient removes a client's admin account from one of their
+// organizations. The organization and its data are left untouched.
+func (router *UserRouter) detachClient(w http.ResponseWriter, r *http.Request) {
+	user := GetRequestUser(r)
+	if !CanManagePlatform(user) {
+		SendForbidden(w)
+		return
+	}
+	vars := mux.Vars(r)
+	client, err := GetUserRepository().GetOne(vars["id"])
+	if err != nil || client.OrganizationID != user.OrganizationID {
+		SendNotFound(w)
+		return
+	}
+	target, err := GetUserRepository().GetByEmail(vars["organizationId"], client.Email)
+	if err != nil || target == nil || target.OrganizationID == user.OrganizationID {
+		SendNotFound(w)
+		return
+	}
+	if err := GetUserRepository().Delete(target); err != nil {
+		log.Println(err)
+		SendInternalServerError(w)
+		return
+	}
+	SendUpdated(w)
+}
+
 func (router *UserRouter) getSelf(w http.ResponseWriter, r *http.Request) {
 	e := GetRequestUser(r)
 	if e == nil {
@@ -473,9 +737,12 @@ func (router *UserRouter) getSelf(w http.ResponseWriter, r *http.Request) {
 		SendInternalServerError(w)
 		return
 	}
+	platform := CanManagePlatform(e)
 	res := &GetUserSelfResponse{
 		GetUserResponse: *router.copyToRestModel(e, false, passkeyCount > 0, roleIDs),
 		Permissions:     PermissionsToRestModel(GetEffectivePermissions(e, e.OrganizationID)),
+		Platform:        platform,
+		Client:          !platform && IsPlatformClient(e),
 	}
 	res.Organization = GetOrganizationResponse{
 		ID: org.ID,
@@ -602,6 +869,12 @@ func (router *UserRouter) getAll(w http.ResponseWriter, r *http.Request) {
 	}
 	res := []*GetUserResponse{}
 	for _, e := range list {
+		// Platform operators run the service, they are not staff of any
+		// workspace: they stay out of every user directory, including the
+		// directory of the organization their own account lives in.
+		if CanManagePlatform(e) {
+			continue
+		}
 		m := router.copyToRestModel(e, true, hasPasskeysByUserID[e.ID], roleIDsByUserID[e.ID])
 		res = append(res, m)
 	}
@@ -769,12 +1042,84 @@ func (router *UserRouter) delete(w http.ResponseWriter, r *http.Request) {
 	if !CheckOrgRetainsAdmin(w, e.OrganizationID, e.ID) {
 		return
 	}
+	// Deleting a client is deleting a customer of the platform, so it takes
+	// their whole business with it: every organization they run, and the areas,
+	// bookings and staff inside it. Leaving those behind would leave workspaces
+	// nobody owns, still reachable by the people who worked in them.
+	if CanManagePlatform(user) && GetUserRepository().IsPlatformOrganization(e.OrganizationID) {
+		if err := router.deleteClientOrganizations(e); err != nil {
+			log.Println(err)
+			SendInternalServerError(w)
+			return
+		}
+	}
 	if err := GetUserRepository().Delete(e); err != nil {
 		log.Println(err)
 		SendInternalServerError(w)
 		return
 	}
 	SendUpdated(w)
+}
+
+// deleteClientOrganizations removes every workspace the client runs.
+//
+// An organization shared with another client is kept - only this client's
+// access to it is withdrawn - so that removing one customer never destroys
+// another customer's data.
+func (router *UserRouter) deleteClientOrganizations(client *User) error {
+	accounts, err := GetUserRepository().GetUsersWithEmail(client.Email)
+	if err != nil {
+		return err
+	}
+	for _, account := range accounts {
+		if account.ID == client.ID || GetUserRepository().IsPlatformOrganization(account.OrganizationID) {
+			continue
+		}
+		org, err := GetOrganizationRepository().GetOne(account.OrganizationID)
+		if err != nil || org == nil {
+			continue
+		}
+		shared, err := router.organizationHasOtherClient(org.ID, client.Email)
+		if err != nil {
+			return err
+		}
+		if shared {
+			if err := GetUserRepository().Delete(account); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := GetOrganizationRepository().Delete(org); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// organizationHasOtherClient reports whether a different client also runs this
+// organization, identified by holding an administrator account in it whose
+// address has a client record of its own.
+func (router *UserRouter) organizationHasOtherClient(organizationID string, email string) (bool, error) {
+	admins, err := GetUserRepository().GetAll(organizationID, 1000, 0)
+	if err != nil {
+		return false, err
+	}
+	for _, a := range admins {
+		if strings.EqualFold(a.Email, email) ||
+			!HasPermission(a, organizationID, PermissionUsers, PermissionLevelAdmin) {
+			continue
+		}
+		peers, err := GetUserRepository().GetUsersWithEmail(a.Email)
+		if err != nil {
+			return false, err
+		}
+		for _, p := range peers {
+			if GetUserRepository().IsPlatformOrganization(p.OrganizationID) {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
 }
 
 func (router *UserRouter) create(w http.ResponseWriter, r *http.Request) {
