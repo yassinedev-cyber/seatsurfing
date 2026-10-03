@@ -126,6 +126,10 @@ type AuthPreflightResponse struct {
 	CustomLogoUrl        string                           `json:"customLogoUrl"`
 }
 
+type OrgForEmailRequest struct {
+	Email string `json:"email" validate:"required,email,max=256"`
+}
+
 type AuthPasswordRequest struct {
 	Email             string          `json:"email" validate:"required,email,max=256"`
 	Password          string          `json:"password" validate:"required,min=8,max=64"`
@@ -175,6 +179,7 @@ func (router *AuthRouter) SetupRoutes(s *mux.Router) {
 	s.HandleFunc("/refresh", router.refreshAccessToken).Methods("POST")
 	s.HandleFunc("/singleorg", router.singleOrg).Methods("GET")
 	s.HandleFunc("/org/{domain}", router.getOrgDetails).Methods("GET")
+	s.HandleFunc("/org-for-email", router.getOrgForEmail).Methods("POST")
 }
 
 func (router *AuthRouter) getOrgDetails(w http.ResponseWriter, r *http.Request) {
@@ -188,6 +193,56 @@ func (router *AuthRouter) getOrgDetails(w http.ResponseWriter, r *http.Request) 
 		SendNotFound(w)
 		return
 	}
+	router.sendPreflightForOrg(w, org)
+}
+
+// getOrgForEmail resolves the organization a sign-in belongs to from the email
+// alone: everyone signs in at the platform's single address, so the URL names
+// no tenant. When the identity spans several organizations, the one where it
+// holds the most authority wins; the switcher handles the rest after sign-in.
+func (router *AuthRouter) getOrgForEmail(w http.ResponseWriter, r *http.Request) {
+	var m OrgForEmailRequest
+	if UnmarshalValidateBody(r, &m) != nil {
+		SendBadRequest(w)
+		return
+	}
+	users, err := GetUserRepository().GetUsersWithEmail(m.Email)
+	if err != nil {
+		SendInternalServerError(w)
+		return
+	}
+	authority := func(u *User) int {
+		if CanManagePlatform(u) {
+			return 2
+		}
+		if HasAnyPermission(u, u.OrganizationID) {
+			return 1
+		}
+		return 0
+	}
+	var chosen *User
+	chosenAuthority := -1
+	for _, u := range users {
+		if u.Disabled {
+			continue
+		}
+		if a := authority(u); a > chosenAuthority {
+			chosen, chosenAuthority = u, a
+		}
+	}
+	if chosen == nil {
+		SendNotFound(w)
+		return
+	}
+	org, err := GetOrganizationRepository().GetOne(chosen.OrganizationID)
+	if err != nil || org == nil {
+		SendNotFound(w)
+		return
+	}
+	router.sendPreflightForOrg(w, org)
+}
+
+func (router *AuthRouter) sendPreflightForOrg(w http.ResponseWriter, org *Organization) {
 	res := router.getPreflightResponseForOrg(org)
 	if res == nil {
 		SendInternalServerError(w)

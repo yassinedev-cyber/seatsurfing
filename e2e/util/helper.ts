@@ -13,7 +13,7 @@ export async function login(
   await page
     .locator("form[name='password-login'] input[type='password']")
     .fill(password);
-  await page.getByRole("button", { name: "➤" }).click();
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }
 
 // Cancels all bookings of the currently logged-in user via the API.

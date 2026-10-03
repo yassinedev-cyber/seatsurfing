@@ -1,4 +1,5 @@
 import React from "react";
+import BrandLogo from "@/components/BrandLogo";
 import { Form, Button, InputGroup } from "react-bootstrap";
 import { NextRouter } from "next/router";
 import Link from "next/link";
@@ -6,14 +7,13 @@ import withReadyRouter from "@/components/withReadyRouter";
 import { TranslationFunc, withTranslation } from "@/components/withTranslation";
 import AuthProvider from "@/types/AuthProvider";
 import Organization from "@/types/Organization";
+import MyOrganization from "@/types/MyOrganization";
 import Ajax from "@/util/Ajax";
 import AjaxCredentials from "@/util/AjaxCredentials";
 import RuntimeConfig from "@/components/RuntimeConfig";
-import MyOrganization from "@/types/MyOrganization";
 import JwtDecoder from "@/util/JwtDecoder";
 import Loading from "@/components/Loading";
-import SeatsurfingAppLogo from "@/components/SeatsurfingAppLogo";
-import CopyrightFooter from "@/components/CopyrightFooter";
+import LanguageSelector from "@/components/LanguageSelector";
 import Validation from "@/util/Validation";
 import Navigation from "@/util/Navigation";
 import AjaxError from "@/util/AjaxError";
@@ -150,11 +150,42 @@ class Login extends React.Component<Props, State> {
         this.applyOrg(res);
       })
       .catch(() => {
-        this.setState({
-          domainNotFound: true,
-          loading: false,
-        });
+        // Organizations have no hostname of their own, so there is nothing to
+        // resolve from the URL. The sign-in form is shown as normal and the
+        // organization is resolved from the email address on submit.
+        this.setState({ loading: false });
       });
+  };
+
+  /**
+   * Finds the organization the typed email belongs to.
+   *
+   * The address everyone signs in at is the platform's own, so it identifies no
+   * tenant - the email does. This runs on every sign-in rather than only when
+   * the address resolved to nothing, because otherwise a client's staff, who
+   * exist solely inside their employer's organization, would be authenticated
+   * against the operator's organization and rejected.
+   */
+  resolveOrgFromEmail = async (): Promise<boolean> => {
+    try {
+      const res = await Ajax.postData(
+        "/auth/org-for-email",
+        { email: this.state.email },
+        () => true,
+      );
+      this.org = new Organization();
+      this.org.deserialize(res.json.organization);
+      this.setState({
+        providers: res.json.authProviders,
+        noPasswords: !res.json.requirePassword,
+        disablePasswordLogin: res.json.disablePasswordLogin,
+      });
+      return true;
+    } catch (e) {
+      // Fall back to whatever the address resolved to, so a deployment that
+      // still uses per-organization hostnames keeps working.
+      return this.org != null;
+    }
   };
 
   onSuccessfulLogin = async (data: {
@@ -181,10 +212,6 @@ class Login extends React.Component<Props, State> {
    * into a workspace they do not administer - they would land on the booking
    * pages with no way out. When the identity administers another organization
    * it belongs to, continue the session there instead.
-   *
-   * The switcher's own listing is the source of truth here, and it already
-   * leaves out the operator's organization for anybody but the operator, so
-   * every entry it returns is a workspace this identity genuinely holds.
    */
   switchToAdministeredOrganization = async (): Promise<void> => {
     if (RuntimeConfig.hasAnyPermission()) {
@@ -203,11 +230,17 @@ class Login extends React.Component<Props, State> {
     }
   };
 
-  onPasswordSubmit = (e: any) => {
+  onPasswordSubmit = async (e: any) => {
     e.preventDefault();
     this.setState({
       inPasswordSubmit: true,
     });
+    if (!(await this.resolveOrgFromEmail())) {
+      // Unknown address: reported the same way as a wrong password, so the form
+      // does not tell a stranger which email addresses exist.
+      this.setState({ invalid: true, inPasswordSubmit: false });
+      return;
+    }
     const payload: any = {
       email: this.state.email,
       password: this.state.password,
@@ -452,15 +485,29 @@ class Login extends React.Component<Props, State> {
       );
     }
 
+    const copyrightFooter = (
+      <div className="copyright-footer">
+        &copy;&nbsp;
+        <a
+          href="https://seatsurfing.io"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Workspace
+        </a>
+        <LanguageSelector />
+      </div>
+    );
+
     if (this.state.domainNotFound) {
       return (
         <div className="container-signin">
           <Form className="form-signin">
-            <SeatsurfingAppLogo />
+            <BrandLogo className="logo" />
             <h3>Domain not found.</h3>
             <p>
               Please make sure your domain name is set up correctly in
-              Seatsurfing&#39;s settings.
+              Workspace&#39;s settings.
             </p>
             <p>If you believe this is an error, please contact support.</p>
           </Form>
@@ -489,7 +536,7 @@ class Login extends React.Component<Props, State> {
       return (
         <div className="container-signin">
           <Form className="form-signin">
-            <SeatsurfingAppLogo />
+            <BrandLogo className="logo" />
             <h3>{this.org?.name}</h3>
             {providerSelection}
             {buttons}
@@ -505,7 +552,7 @@ class Login extends React.Component<Props, State> {
               </Button>
             </p>
           </Form>
-          <CopyrightFooter />
+          {copyrightFooter}
         </div>
       );
     }
@@ -514,7 +561,7 @@ class Login extends React.Component<Props, State> {
       return (
         <div className="container-signin">
           <Form className="form-signin">
-            <SeatsurfingAppLogo />
+            <BrandLogo className="logo" />
             <h3>{this.org?.name}</h3>
             <p>
               Password Login is disabled, but no Auth Providers are configured.
@@ -539,7 +586,7 @@ class Login extends React.Component<Props, State> {
             !this.state.requirePasskey || this.state.requirePasswordUpdate
           }
         >
-          <SeatsurfingAppLogo />
+          <BrandLogo className="logo" />
           <h3>{this.org?.name}</h3>
           <p>{this.props.t("passkeyRequired")}</p>
           <Button
@@ -575,7 +622,7 @@ class Login extends React.Component<Props, State> {
           name="totp-login"
           hidden={!this.state.requireTotp}
         >
-          <SeatsurfingAppLogo />
+          <BrandLogo className="logo" />
           <h3>{this.org?.name}</h3>
           <p>{this.props.t("enterTotpCode")}</p>
           <Form.Group>
@@ -613,7 +660,7 @@ class Login extends React.Component<Props, State> {
             !this.state.requirePasswordUpdate
           }
         >
-          <SeatsurfingAppLogo />
+          <BrandLogo className="logo" />
           <h3>{this.org?.name}</h3>
           <p>{this.props.t("passwordUpdateInfo")}</p>
           <Form.Group style={{ marginBottom: "5px" }}>
@@ -683,8 +730,18 @@ class Login extends React.Component<Props, State> {
             this.state.requirePasswordUpdate
           }
         >
-          <SeatsurfingAppLogo />
-          <h3>{this.org?.name}</h3>
+          <div className="login-lockup">
+            <img
+              src="/ui/seatsurfing_white_logo.svg"
+              alt="CODYN Workspace"
+              className="lockup-badge"
+            />
+            <span className="lockup-text">
+              <span className="lockup-name">CODYN</span>
+              <span className="lockup-sub">Workspace</span>
+            </span>
+          </div>
+          <p className="login-subtitle">{this.props.t("loginSubtitle")}</p>
           <Form.Group style={{ marginBottom: "5px" }}>
             <Form.Control
               type="email"
@@ -704,31 +761,34 @@ class Login extends React.Component<Props, State> {
             />
           </Form.Group>
           <Form.Group>
-            <InputGroup>
-              <Form.Control
-                type="password"
-                readOnly={this.state.inPasswordSubmit}
-                placeholder={this.props.t("password")}
-                value={this.state.password}
-                onChange={(e: any) =>
-                  this.setState({
-                    password: e.target.value,
-                    invalid: false,
-                    passkeyLoginFailed: false,
-                  })
-                }
-                required={true}
-                isInvalid={this.state.invalid}
-              />
-              <Button variant="primary" type="submit">
-                {this.state.inPasswordSubmit ? (
-                  <Loading showText={false} paddingTop={false} />
-                ) : (
-                  <div className="feather-btn">&#10148;</div>
-                )}
-              </Button>
-            </InputGroup>
+            <Form.Control
+              type="password"
+              readOnly={this.state.inPasswordSubmit}
+              placeholder={this.props.t("password")}
+              value={this.state.password}
+              onChange={(e: any) =>
+                this.setState({
+                  password: e.target.value,
+                  invalid: false,
+                  passkeyLoginFailed: false,
+                })
+              }
+              required={true}
+              isInvalid={this.state.invalid}
+            />
           </Form.Group>
+          <Button
+            variant="primary"
+            type="submit"
+            className="btn-login"
+            disabled={this.state.inPasswordSubmit}
+          >
+            {this.state.inPasswordSubmit ? (
+              <Loading showText={false} paddingTop={false} />
+            ) : (
+              this.props.t("signin")
+            )}
+          </Button>
           <Form.Control.Feedback type="invalid">
             {this.props.t("errorInvalidEmail")}
           </Form.Control.Feedback>
@@ -755,7 +815,7 @@ class Login extends React.Component<Props, State> {
             <Link href="/resetpw">{this.props.t("forgotPassword")}</Link>
           </p>
         </Form>
-        <CopyrightFooter />
+        {copyrightFooter}
       </div>
     );
   }

@@ -24,6 +24,12 @@
   position: static;
 }
 
+.copyright-footer .lng-selector {
+  position: absolute;
+  right: 10px;
+  bottom: -5px;
+}
+
 .iconLanguage_nlXk {
   margin-right: 5px;
   vertical-align: text-bottom;
@@ -34,6 +40,11 @@
   max-width: 330px;
   padding: 15px;
   margin: auto;
+}
+
+.form-signin .logo {
+  width: 100%;
+  margin-bottom: 50px;
 }
 
 .form-signin .form-control:focus {

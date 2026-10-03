@@ -1023,6 +1023,39 @@ func TestTotpReplayAttack(t *testing.T) {
 	res = ExecuteTestRequest(req)
 	CheckTestResponseCode(t, http.StatusBadRequest, res.Code)
 }
+func resolveOrgForEmail(t *testing.T, email string, expectedCode int) string {
+	req := NewHTTPRequest("POST", "/auth/org-for-email", "", bytes.NewBufferString(`{"email": "`+email+`"}`))
+	res := ExecuteTestRequest(req)
+	CheckTestResponseCode(t, expectedCode, res.Code)
+	if expectedCode != http.StatusOK {
+		return ""
+	}
+	var resBody *AuthPreflightResponse
+	json.Unmarshal(res.Body.Bytes(), &resBody)
+	return resBody.Organization.ID
+}
+
+func TestAuthOrgForEmail(t *testing.T) {
+	ClearTestDB()
+	operator := CreateTestUserPlatformOperator()
+	client := CreateTestOrg("client.test")
+
+	// A client: a plain directory record beside the operator, and the
+	// administrator of their own workspace under the same email.
+	CreateTestUserInOrgWithName(&Organization{ID: operator.OrganizationID}, "bob@client.test", UserRoleUser)
+	CreateTestUserInOrgWithName(client, "bob@client.test", UserRoleOrgAdmin)
+	staff := CreateTestUserInOrgWithName(client, "carol@client.test", UserRoleUser)
+
+	CheckTestString(t, operator.OrganizationID, resolveOrgForEmail(t, operator.Email, http.StatusOK))
+	CheckTestString(t, client.ID, resolveOrgForEmail(t, "bob@client.test", http.StatusOK))
+	CheckTestString(t, client.ID, resolveOrgForEmail(t, "carol@client.test", http.StatusOK))
+	resolveOrgForEmail(t, "nobody@client.test", http.StatusNotFound)
+
+	staff.Disabled = true
+	GetUserRepository().Update(staff)
+	resolveOrgForEmail(t, "carol@client.test", http.StatusNotFound)
+}
+
 func TestAuthGetOrgDetailsNotFound(t *testing.T) {
 	ClearTestDB()
 
